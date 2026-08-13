@@ -8,6 +8,11 @@
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
 
+  // No macroflow.<subdomain>.workers.dev route. A hostname-level gate such as
+  // Cloudflare Access protects the custom domain only, so a live workers.dev
+  // URL would be an unauthenticated way around it.
+  "workers_dev": false,
+
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
