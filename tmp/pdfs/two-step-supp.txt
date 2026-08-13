@@ -1,0 +1,360 @@
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+        Decomposing Food Images for Better Nutrition Analysis: A Nutritionist-Inspired
+                          Two-Step Multimodal LLM Approach                          
+                                                                                    
+                                 Supplementary Material                             
+                                                                                    
+        A.DatasetsDetail                                                            
+                                                                                    
+        Nutrition5kisadatasetthatincludesvisualandnutritional                       
+        datacollectedfromGooglecafeteriasusingacustomscan-                          
+        ning rig. In contrast, Gindee121 is a dataset sourced from                  
+        ourplatformandannotatedbynutritionists.Thedifferences (a)Nutrition5k        
+        betweenthesetwodatasetsaredemonstratedthroughsam-                           
+        pleimagesinFigure10.                                                        
+          Table4presentsthedatasetinformation,whileFigure9                          
+        illustratesthedistributioncomparisonbetweenNutrition5k                      
+        andNutrition320. Ourproposedsamplingmethodensures                           
+        thatthedistributionremainsconsistentacrossbothdatasets. (b)Gindee121        
+                             AverageValue   Figure10.SampleimagesfromtheNutrition5kandGindee121
+                                                          datasets.                 
+          Dataset ImageCount Cal Weight Protein Carb Fat                            
+                      (kcal) (gram) (gram) (gram) (gram)                            
+         Gindee121 121 291.8 - 15.7 27.1 13.3                                       
+                                            Prompt:Thegivenimagedepictsfood.Classifytheimageasawholebasedonthefollowingattributes,consideringthe
+         Nutrition320 320 251.8 239.7 18.0 20.4 11.7 mostprominentfeaturesiftheimagecontainsmultipledishes.OutputtheresultsinJSONformat.Usetheprovidedrestricted
+                                            classes,andclassifyas”Other”ifanattributedoesnotfallintothegivencategories.
+         Nutrition5k 3,241 249.2 212.2 17.6 19.0 12.4 • Name:Nameofthemostprominentorrepresentativefooditemintheimage.
+                                            • PreparationMethod:Cooked,Raw,Processed,Baked,Fermented,Roasted,Other.
+                                            • Cultural/RegionalOrigin:SoutheastAsian,EastAsian,American,Thai,Filipino,Chinese,Global,Japanese,Korean,
+                 Table4.DatasetInformation   Indian,Western,MiddleEastern,Mexican,Italian,Greek,Other.
+                                            • FoodType:MainCourse,SideDish,Dessert,Drink,Soup,Ingredient,Other.
+                                            • FoodCategory:Meat,Vegetable,Grain,Seafood,Fruit,Dairy,Noodles,Other.
+                                            • Function:Breakfast,Lunch,Dinner,Snack,Supplement,Other.
+                                            • FoodGroup(USDA):Grains,Protein,Vegetables,Fruits,Dairy,Other.
+                                            • DietaryRestriction:Vegan,Vegetarian,Gluten-Free,Lactose-Free,None,LowFat,LowSodium,Other.
+                                            • FoodAllergens:Soy,Dairy,Wheat,Shellfish,Eggs,Peanuts,Nuts,Fish,None,Other.
+                                            • Packaging:Restaurant,Homemade,Ready-to-Eat,Takeout,Frozen,Processed,Canned,Other.
+                                            • Portion:SingleDish,Snack,Meal,Other.  
+                                            • CameraViewAngle:Overhead,Close-Up,Side,SlightAngle,Other.
+                                            OutputtheattributesasasingleJSONobjectsummarizingtheimageasawhole.
+                                            ExampleJSONoutputformat:                
+                                                     {                              
+                                             "Name": "PadThai",                     
+                                             "PreparationMethod": "Cooked",         
+                                             "Cultural/RegionalOrigin": "Thai",     
+                                             "FoodType": "MainCourse",              
+                                             "FoodCategory": "Seafood",             
+                                             "Function": "Dinner",                  
+                                             "FoodGroup(USDA)": "Protein",          
+                                             "DietaryRestriction": "Gluten-Free",   
+                                             "FoodAllergens": "Shellfish",          
+                                             "Packaging": "Ready-to-Eat",           
+                                             "Portion": "SingleDish",               
+                                             "CameraViewAngle": "Overhead",         
+                                            }                                       
+          Figure9.CaloriedistributionofNutrition5k(blue)withthe                     
+                                             Table5.Gemini-1.5-Propromptforobtainingfooddetails.
+          selected10%subset(Nutrition320),highlightedinorange.                      
+                                            apply visual prompting, have their prompt templates de-
+        B.Prompts                                                                   
+                                            tailedinTable10(PromptStructure)andTable11(Edited
+        B.1.ClusteringGindee                Prompt). OurproposedTwo-StepPromptingisoutlinedin
+                                            Table7(Step1)andTable8(Step2).          
+        The prompts used to extract information for each food in                    
+        the Gindee dataset to form Gindee121 are shown in Table                     
+        5.                                  C.NutritionAnalysisModelConfigs         
+        B.2.PromptsUsedinEachExperiment                                             
+                                            Fromfigure12,theseconfigurationsarecriticalasdirectly
+        We use standard prompting in Experiment 00 as the base- affectthemodels’abilitytoprocesscomplexfooddescrip-
+        line, as shown in Table 6. Experiments 01 to 08, which tionsandnutritiondata.
+
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+        Prompt:PleaseanalyzethefoodordrinkintheprovidedimageandrespondwithaJSONobjectcontainingdetailsofthe Prompt:
+        mostlikelymenuitem.TheJSONobjectshouldincludethefollowingstructure: PleaseanalyzethefoodordrinkintheprovidedimagePromptExpi.The”fooddescriptioneng”fieldshouldprovide
+                                            auniqueanddetaileddescriptionofthefooditem,includingitsappearance,texture,andanynotablecharacteristics.The
+        { "ingredientslistengfood": [str],  ”nameeng”fieldshouldcontainthenameofthefoodordrink.Iftheimagecontainsmultiplefooditems,includeallthefood
+         "weight": int(percentage),         namesseparatedbycommasinthe”nameeng”field.Iftheexactnameofthefoodisuncertain,provideabriefdescription
+         "ediblepercentage": int(kcal),     ofthedishbasedonitsappearanceandvisibleingredients.Whenestimatingthenutritionalvalues,refertoreliablenutrition
+         "oilinfood": float(gram),          databasessuchastheUSDAFoodDataCentralorotherreputablesources.Usethedatafromthesedatabasestocalculate
+         "cookingmethod": str,              the”weight”,”cal”,”protein”,”fat”,and”carb”basedontheidentifiedingredientsandtheirproportionsinthedish.Inthe
+                                            ”weight”field,provideabriefrecommendationonhowthedishfitsintoabalanceddietoranypotentialdietaryconcerns
+        }                                   basedonthenutritionalcontent.Iftherearevariationsinminoringredients(suchassaucesordressings),mentiononlyone
+        The"ingredientslisteng"fieldlistsallmajoringredientswiththeirportionsizesingramsinEnglish.Ifthereare example,like”Koreansauce”,”SourCurryPaste”,or”SpicySaladDressing”.TheJSONobjectrepresentsallthefoodin
+        variationsinminoringredientslikesaucesordressings,mentiononlyoneexample,suchas”Koreansauce”,”SourCurry thewholeimage.
+        Paste”,or”SpicySaladDressing”.Presentthisinformationasanarrayofobjects,eachcontainingthenameandportion.
+        Inthe"weight"field,determinetheweightofthestandardservingsizeofthedishingrams.Ensurethisisconsistentwith
+        thelistedingredients.                                                       
+        Forthe"ediblepercentage"field,calculatethepercentageofthedishthatisedible,excludingnon-ediblepartslike Table10.Promptstemplateforiisexperimentsfrom01to08see
+        packagingorinediblegarnishes.                                               
+        Forthe"oilinfood"field,estimatetheamountofoilabsorbedinstir-friedanddeep-frieddishes,ingrams. thedetailinTable11.
+        The"nameeng"fieldshouldcontainthenameofthefoodordrink.Iftheimagecontainsmultiplefooditems,includeall
+        thefoodnamesseparatedbycommasinthe"nameeng"field.Iftheexactnameofthefoodisuncertain,provideabrief
+        descriptionofthedishbasedonitsappearanceandvisibleingredients.              
+        Inthe"cookingmethod"field,identifythecookingmethod(s)usedinpreparingthedish,suchasboil,poach,fry,grill,
+        f                                                                           
+        T                                                                           
+        r                                                                           
+         h                                                                          
+         es                                                                         
+         e                                                                          
+         h                                                                          
+          J                                                                         
+          ,                                                                         
+          S                                                                         
+          r                                                                         
+          O                                                                         
+          ea                                                                        
+           N                                                                        
+           dy                                                                       
+           o                                                                        
+            -                                                                       
+            b                                                                       
+            to                                                                      
+            je                                                                      
+            -e                                                                      
+            c                                                                       
+             a                                                                      
+             t                                                                      
+             t                                                                      
+             r                                                                      
+             ,                                                                      
+             e                                                                      
+              s                                                                     
+              p                                                                     
+              t                                                                     
+              r                                                                     
+              e                                                                     
+              e                                                                     
+              a                                                                     
+               s                                                                    
+               m                                                                    
+               en                                                                   
+               ,                                                                    
+               t                                                                    
+                o                                                                   
+                s                                                                   
+                r                                                                   
+                a                                                                   
+                s                                                                   
+                l                                                                   
+                 t                                                                  
+                 l                                                                  
+                 ir                                                                 
+                 th                                                                 
+                 -f                                                                 
+                  e                                                                 
+                  ry                                                                
+                  f                                                                 
+                  .                                                                 
+                  oodinthewholeimage.                                               
+                                            PromptExpi       Prompt                 
+                                              01,02       “withfooddetectionbox”    
+                 Table6.StandardPrompting     03  “(originalimageontheleft,foodsegmentationimageontheright)”
+                                                      “(originalimageontheleft,foodsegmentation
+                                              04,05                                 
+                                                       insideboundingboximageontheright)”
+        Prompt:PleaseanalyzethefoodordrinkintheprovidedimageandrespondwithaJSONobjectcontainingdetailsofthe 06 “(originalimageontheleft,foodsegmentationimageontheright)”
+        mostlikelymenuitem.TheJSONobjectshouldincludethefollowingstructure:         
+                                                          “(originalimageontheleft, 
+        {                                     07                                    
+         "fooddescriptioneng": str,                   foodsemanticsegmentationimageontheright)”
+         "nameeng": str,                                                            
+         "weight": int(gram),                             “(originalimageontheleft, 
+                                              08                                    
+         "cal": int(kcal),                            foodpanopticsegmentationimageontheright)”
+         "protein": float(gram),                                                    
+         "fat": float(gram),                                                        
+         "carb": float(gram),                         Table11.Prompt01to08          
+         "weight": str,                                                             
+         "healthsuggestioneng": str,                                                
+         "ingredientslisteng": [str]                                                
+        }                                                                           
+        The”fooddescription”fieldshouldprovideauniqueanddetaileddescriptionofthefooditem,includingitsappearance, Model Temp MaxOutToken ContextLength
+        texture,andanynotablecharacteristics.                                       
+        The”nameeng”fieldshouldcontainthenameofthefoodordrink.Iftheimagecontainsmultiplefooditems,includeall GPT-4o 0.5 1024 128K
+        thefoodnamesseparatedbycommasinthe”nameeng”field.Iftheexactnameofthefoodisuncertain,provideabrief
+        descriptionofthedishbasedonitsappearanceandvisibleingredients. Gemini-1.5-Pro 0.5 1024 1M
+        Whenestimatingthenutritionalvalues,refertoreliablenutritiondatabasessuchastheUSDAFoodDataCentralorother
+        reputablesources.Usethedatafromthesedatabasestocalculatethe”weight”,”cal”,”protein”,”fat”,and”carb”basedon Gemini-2.0-Flash 0.5 1024 1M
+        theidentifiedingredientsandtheirproportionsinthedish.                       
+        Inthe”weight”field,provideabriefrecommendationonhowthedishfitsintoabalanceddietoranypotentialdietary Gemini-2.0-Pro 0.5 1024 2M
+        concernsbasedonthenutritionalcontent.                                       
+                                            Qwen2.5-VL-72B 0.5   1024    32K        
+        Iftherearevariationsinminoringredients(suchassaucesordressings),mentiononlyoneexample,like”Koreansauce”,
+        ”SourCurryPaste”,or”SpicySaladDressing”. Llama3.2-90B-Vision 0.5 1024 33K   
+        TheJSONobjectrepresentsallthefoodinthewholeimage                            
+                                            Gemini-2.0-Flash-Thinking 0.5 1024 1M   
+               Table7.Two-StepPrompting(Step1) o1          0.5   1024    200K       
+                                              Table12.MLLMsinferenceconfigsfornutritionanalysis
+        Prompt:Pleaseanalyzethefoodordrinkintheprovidedimagewiththefollowingfooddetailstoestimateitsnutritional
+        valueandrespondwithaJSONobjectcontainingcal,protein,fat,andcarb.Content:FoodDetail:
+        {                                                                           
+        fooddetail                                                                  
+        }• Calculatethetotal”cal”inkcalforthedishbyaggregatingthecaloriccontentofindividualingredientslistedinthe cookbook and for semantic and panoptic segmentation we
+         ”ingredientslisteng”.UsereputablenutritionaldatabasessuchasUSDAFoodDataCentraltoestablishaccuratevalues
+         basedonquantityingrams.            useFoodSAMsourcefromFoodSAM-cookbook.   
+        • Estimatethetotal”protein”contentingrams,summingupcontributionsfromingredientsthataresignificantprotein
+         sources.                                                                   
+        • Determinethetotal”fat”contentingrams,takingintoaccountallfattycomponentsfromtheingredientslisted,including Examples of the input image for each experiment are
+         oilsabsorbedduringcooking.                                                 
+        • Calculate”carb”contentingramsbysummingthecarbohydratecontributionofeachingredient,particularlyfromgrains providedinFigure11.
+         andvegetables.                                                             
+        Ensureyourcalculationsarebasedontheaggregatedinputdataprovided,maintainingalignmentwithlistedingredientsand
+        theirproportions.PresentyourfindingsinaJSONobjectrepresentingtheoverallnutritionalprofile.
+                                                Parameter        Value              
+               Table8.Two-StepPrompting(Step2)                                      
+                                                model        facebook/sam2.1-hiera-large
+                                                pointsperside     64                
+                                                pointsperbatch    128               
+        D.VisualPromptingModelConfigs           prediouthresh     0.7               
+                                                stabilityscorethresh 0.92           
+                                                stabilityscoreoffset 0.7            
+        For experiments 03, 05, and 06, we used cropnlayers       1                 
+                                                boxnmsthresh      0.7               
+        “SAM2AutomaticMaskGenerator” with the con-                                  
+                                                cropnpointsdownscalefactor 2        
+        figuration shown in Table 5. For experiment 04, minmaskregionarea 25.0      
+                                                usem2m            True              
+        we utilized “SAM2ImagePredictor” with the model                             
+        facebook/sam2.1-hiera-large and bounding boxes from                         
+                                                   Table13.SAM2.1inferenceconfigs   
+        experiment 02. Both “SAM2AutomaticMaskGenerator”                            
+        and “SAM2ImagePredictor” are sourced from SAM2-                             
+
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                            E.DetailedMetrics                       
+                                            E.1.MeanAbsoluteError                   
+                                                                                    
+                                            Mean Absolute Error (MAE) is a commonly used metric
+                                            formeasuringtheaverageabsolutedifferencebetweenpre-
+                                            dictedandactualvalues. Itisdefinedas:   
+                                                             n                      
+                                                           1                        
+                                                     MAE =     y yˆ        (1)      
+                   (a)Experiment00and09                    n  | i   i |             
+                                                            i=1                     
+                                                            X                       
+                                            wherey representsthetruenutritionalvalue(e.g.,calories,
+                                                i                                   
+                                            weight,protein,fat,carbohydrates)ofafooditem,yˆ isthe
+                                                                         i          
+                                            predicted value, and n is the total number of samples. A
+                                            lowerMAEindicatesamoreaccurateprediction.
+                                            E.2.JaccardSimilarity                   
+             (b)Experiment01 (c)Experiment02                                        
+                                            JaccardSimilarityisastatisticalmeasureusedtoassessthe
+                                            similarityanddiversitybetweensamplesets. Itisgenerally
+                                            definedastheratiooftheintersectionsizetotheunionsize,
+                                            commonly referred to as Intersection over Union (IoU).
+                                            Given two sets of ingredients, A and B, the equation for
+                                            JaccardSimilarityispresentedinFigure10. 
+                    (d)Experiment03                                                 
+                                                       A  B      A B                
+                                                J(A,B)= | \ | = | \ |      (2)      
+                                                       A  B   A+B   A B             
+                                                       | [ |  | | | | | \ |         
+                                            E.3.AverageIoU                          
+                                            Average Intersection over Union (Average IoU) is a met-
+                                            ricusedinobjectdetectiontomeasurehowwellpredicted
+                    (e)Experiment04                                                 
+                                            bounding boxes align with ground truth boxes. It is com-
+                                            puted as the mean IoU across all detected objects, where
+                                            IoUisdefinedastheratiooftheareaofoverlaptothearea
+                                            ofunionbetweenthepredictedandgroundtruthboxes:
+                                                          AreaofOverlap             
+                                                     IoU =                 (3)      
+                    (f)Experiment05                       AreaofUnion               
+                                            AhigherAverageIoUindicatesbetterlocalizationaccuracy.
+                                            seeinTable15.                           
+                                            F.FoodDetection                         
+                                            To evaluate the model’s understanding of food items and
+                    (g)Experiment06                                                 
+                                            ingredients, weconductaboxdetectionexperimentonthe
+                                            Nutrition320 dataset. Our approach follows the pipeline
+                                            outlined in official cookbooks, such as gemini-cookbook
+                                            andqwen-cookbook. Thepromptsusedinthisexperiment
+                                            aredetailedinTable14.                   
+                    (h)Experiment07         G.IngredientsDatabase                   
+                                            Toevaluatethemodel’sunderstandingoffoodingredients,
+                                            weemploythepipelineillustratedinFigure7. Forthenu-
+                                            tritiondatabase, weusetheUnitedStatesDepartmentof
+                                            Agriculture (USDA) database, which contains more than
+                    (i)Experiment08                                                 
+            Figure11.Sampleinputimageineachexperiment.                              
+
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+         Experiment       Prompt                                                    
+           food   “Detectthe2Dboundingboxofthefood”                                 
+           food  “Detectthe2Dboundingboxesofthefood”                                
+         namefood “Detectthe2Dboundingboxofthefood,name”                            
+         ingredients “Detectthe2Dboundingboxesoftheingredients”                     
+        Table14.DetectionPrompts,nameisthevariableoffoodname                        
+                                                                                    
+          Model     Experiment BoxType AverageIoU                                   
+          Gemini-2.0-Flash food Box 0.577                                           
+          Gemini-2.0-Flash namefood Box 0.590                                       
+                                    "                                               
+          Qwen2.5-VL-72B food Box 0.273                                             
+          Qwen2.5-VL-72B namefood Box 0.297                                         
+                                    "                                               
+          Gemini-2.0-Flash food Boxes 0.691                                         
+          Gemini-2.0-Flash ingredients Boxes 0.690                                  
+                                    #                                               
+          Qwen2.5-VL-72B food Boxes 0.273                                           
+          Qwen2.5-VL-72B ingredients Boxes 0.298                                    
+                                    "                                               
+            Table15.FoodDetectionresultsonnutrition320                              
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+           (a)truelabelintaskbox. (b)Qwen2.5-VL-72Bresultontask                     
+                          boxwithnamefoodprompt1.                                   
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+         (c)Gemini-2.0-Flashontaskbox (d)Gemini-2.0-Flashresultsontask              
+            withfoodprompt2. boxeswithingredientsprompt3.                           
+         Figure12.sampleimagesoffooddetectiononnutrition320.                        
+                                                                                    
+        1,500 ingredients. Furthermore, we consider Nutrition5k                     
+        datasetasanalternative,whichincludesapproximately200                        
+        ingredients.                                                                
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    

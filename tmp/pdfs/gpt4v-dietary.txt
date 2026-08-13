@@ -1,0 +1,852 @@
+                                                                                    
+                                                                                    
+       JOURNALOFLATEXCLASSFILES,VOL.14,NO.8,AUGUST2015                       1      
+                                                                                    
+        Dietary    Assessment       with   Multimodal       ChatGPT:      A         
+                                                                                    
+                                                                                    
+                             Systematic     Analysis                                
+                                                                                    
+           Frank P.-W. Lo, Jianing Qiu, Zeyu Wang, Junhong Chen, Bo Xiao, Wu Yuan, Senior Member, IEEE,
+                    Stamatia Giannarou, Gary Frost and Benny Lo, Senior Member, IEEE
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+        Abstract—Conventional approaches to dietary assessment are reshaped the methodologies employed by dietitians for as-
+       primarily grounded in self-reporting methods or structured sessing dietary intake and influenced how the general public
+       interviews conducted under the supervision of dietitians. These              
+                                           manages their dietary habits [2], [3]. Over the past few
+       methods, however, are often subjective, potentially inaccurate,              
+                                           years, there has been a marked increase in the development
+       and time-intensive. Although artificial intelligence (AI)-based              
+       solutions have been devised to automate the dietary assessment of AI algorithms and applications specifically designed for
+       process, these prior AI methodologies encounter challenges automatic food and ingredient recognition [4]–[11], food seg-
+       in their ability to generalize across a diverse range of food mentation [12], food volume estimation [13]–[18], and recipe
+       types, dietary behaviors, and cultural contexts. This results                
+                                           retrieval[19]–[23]orgeneration[24]–[26],aswellasmachine-
+       in AI applications in the dietary field that possess a narrow                
+                                           learning-enabled smart sensors to detect eating events [27]–
+       specialization and limited accuracy. Recently, the emergence of              
+       multimodal foundation models such as GPT-4V powering the [29]andbehaviors[30],[31]infree-livingsettings.Inaddition
+       latest ChatGPT has exhibited transformative potential across to the algorithmic and hardware advancements, the swift
+       a wide range of tasks (e.g., Scene understanding and image progression of AI-based technological solutions for dietary
+       captioning) in numerous research domains. These models have                  
+                                           assessment can be partly attributed to the curation of large-
+       demonstrated remarkable generalist intelligence and accuracy,                
+                                           scale datasets by the community, for instance, Food2K [8], a
+       capable of processing various data modalities. In this study, we             
+       exploretheapplicationofmultimodalChatGPTwithintherealm dataset that encompasses over 1 million food images across
+       of dietary assessment. Our findings reveal that GPT-4V excels 2,000 categories, and Recipe1M+ [32], which comprises over
+       in food detection under challenging conditions with accuracy 1 million recipes and 13 million food images.
+       up to 87.5% without any fine-tuning or adaptation using food-                
+                                            Despite these advancements, previous AI methodologies
+       specific datasets. By guiding the model with specific language               
+                                           applied to dietary assessment often exhibit a limited scope,
+       prompts(e.g.,Africancuisine),itshiftsfromrecognizingcommon                   
+       staples like rice and bread to accurately identifying regional processing discrete tasks such as merely recognizing food
+       disheslikebankuandugali.AnotherGPT-4V’sstandoutfeature items [4]–[8] or solely retrieving the recipe for a particular
+       is its contextual awareness. GPT-4V can leverage surrounding dish[19]–[23].Theseapproacheslackacomprehensiveunder-
+       objects as scale references to deduce the portion sizes of food              
+                                           standing of dietary knowledge, common practices, assessment
+       items, further enhancing its accuracy in translating food weight             
+                                           workflow, and the variations in eating behaviors and cultural
+       intonutritionalcontent.ThisalignmentwiththeUSDANational                      
+       Nutrient Database underscores GPT-4V’s potential to advance contexts of individuals, hence falling short of achieving the
+       nutritional science and dietary assessment techniques. overarchingobjectiveofaccuratelyquantifyinganindividual’s
+                                           food and nutrient intake, followed by personalized advice on
+        IndexTerms—Dietaryassessment,Foodrecognition,ChatGPT,                       
+                                           healthy diet and health management.      
+       GPT-4V, Foundation model, Large multimodal model, Deep                       
+       learning, Artificial intelligence    Recently, the emergence of AI foundation models [33] has
+                                           presented a new perspective. These models are characterized
+                                           by their vast number of parameters, the extensive and diverse
+                   I. INTRODUCTION         datautilizedfortraining,andtheirremarkableversatility.They
+                                           are capable of addressing a broad spectrum of tasks through
+        The traditional approach to dietary assessment typically                    
+                                           post-training adaptation [33]. This ushers in novel paradigms
+       reliesonself-reportsorinterviewssupervisedbydietitians[1],                   
+                                           for the design of methodologies across numerous research
+       such as 24-Hour dietary recall (24HR), dietary record (DR),                  
+                                           fields, and foundation models are in fact revolutionizing vari-
+       and food frequency questionnaires (FFQs). However, recent                    
+                                           oussectorswithinhealthcare[34],[35],offeringgeneralistin-
+       advancements in artificial intelligence (AI) have significantly              
+                                           telligenceandlarge-scalegeneralizabilityacrossmultipletasks
+                                           suchastherecentVisionFM[36]modelthatisabletoprocess
+        This work was supported by the Innovative Passive Dietary Monitor-          
+                                           eightophthalmicimagingmodalitiesandsolveawidearrayof
+       ing Project funded by the Bill & Melinda Gates Foundation under Grant        
+       OPP1171395. F. P.-W. Lo, Z. Wang, J. Chen, B. Xiao, and S. Gian- ophthalmic tasks. The advent of foundation models opens up
+       narou are with the Hamlyn Centre, Imperial College London, London SW7 new opportunities for enhancing AI-based dietary assessment.
+       2AZ, UK, e-mail:{po.lo15, zeyu.wang20, junhong.chen16, b.xiao, stama-        
+                                           Their primary advantage lies in their ability to associate each
+       tia.giannarou}@imperial.ac.uk.J.QiuandW.YuanarewiththeDepartment             
+       of Biomedical Engineering, The Chinese University of Hong Kong, Hong individual case with a wealth of general and domain-specific
+       Kong, e-mail:{jianingqiu, wyuan}@cuhk.edu.hk. G. Frost and B. Lo are knowledge they have acquired, thereby potentially providing
+       with Department of Metabolism, Digestion and Reproduction, Faculty of        
+                                           a more precise dietary assessment, followed by personalized
+       Medicine,ImperialCollegeLondon,London,SW72AZ,UK,e-mail:{g.frost,             
+       benny.lo}@imperial.ac.uk            dietary and health advice.               
+  3202                                                                              
+  ceD                                                                               
+  41                                                                                
+  ]VC.sc[                                                                           
+  1v29580.2132:viXra                                                                
+
+                                                                                    
+                                                                                    
+       JOURNALOFLATEXCLASSFILES,VOL.14,NO.8,AUGUST2015                       2      
+                                                                                    
+                                                                                    
+        a             GPT-4V                Functions       b                       
+                  Before eating After eating                                        
+                                             Food Recognition                       
+                                                                                    
+          Images                            Portion Size Estimation Interactive Meal Dietary Monitoring
+                                                              Planning Chatbots     
+                  Recognise the food types in the provided images, both             
+                  before and after consumption. Use surrounding                     
+                  objects as references for approximating                           
+                  consumed portion sizes.                                           
+                                             Source Tracking                        
+                  Chapati (100g), ugali (50g) and beef stew (20g)                   
+                  Can you predict which country's foods these might be?             
+         Language                                                                   
+          Prompt  T ar h e e in d d is i h ca e t s iv y e o o u f 'v A e f r l i i c s a te n d c , u c i h s a in p e a , t i w , u ith g a a li s a t n ro d n b g eef stew Food Recommendation Weight Management Personalised Food
+                  likelihood of being specifically from Kenya Support Recommendations
+                 Illustration diagram of GPT-4V based dietary assessment system Potential applications
+       Fig.1. (a)SchematicoverviewoftheGPT-4Vbaseddietaryassessmentsystem.Theleftsectionoutlinesthemultimodalinputmethods,incorporatingboth
+       visual(imagesbeforeandaftereating)andtextual(languageprompts)data.Therightsectiondetailstheprimaryfunctionsofthesystem.(b)Thepotential
+       applicationsofGPT-4Vinthefieldsofnutritionandhealth.                         
+        In this study, we leverage one of seminal multimodal • GPT-4V’sabilitytoconverttheweightoffooditemsinto
+       foundationmodels,i.e.,GPT-4V[37],whichpowersthelatest their nutritional components shows a high level of accu-
+       generation of ChatGPT, for dietary assessment. Previously, racy,correlatingcloselywiththenutritionaldatafromthe
+       GPT-4V has demonstrated impressive capabilities in under- USDANationalNutrientDatabase1.ThishighlightsGPT-
+       standingvisualcontent,andrespondingtoquerieswithawide 4V’spotentialforeffectivecross-referencingandaccurate
+       spectrum of knowledge and a high degree of natural language interpretation within the context of nutritional science.
+       proficiency. Our investigation has yielded significant insights              
+       into the capabilities of GPT-4V in the realm of food detection II. RELATEDWORK
+       and nutritional analysis.                                                    
+                                            Ourstudyprimarilyinvestigatesthevision-languagefeature
+        Our key findings are as follows:                                            
+                                           of multimodal ChatGPT, i.e., the underlying GPT-4V model.
+        • GPT-4V demonstrates satisfactory performance in iden- Hence,thissectionmainlyreviewsprecedingworkinthefield
+          tifying food items, achieving an improved accuracy of                     
+                                           ofdietaryAIthatemploysbothvisualandtextualdietarydata.
+          87.5%whenlanguagepromptsregardingthefood’sorigin                          
+                                            Previously,theuseofdeeplearning-basedimagecaptioning,
+          are provided. We also discovered that GPT-4V possesses                    
+                                           a multimodal technique, has been proposed in the context of
+          an impressive potential for assessing dietary intake from                 
+                                           dietary intake monitoring and assessment [39]. This approach
+          images captured in dark environments, a scenario where                    
+                                           allows for the simultaneous identification of food types, esti-
+          previousvision-basedmethodsoftenfindchallenging,yet                       
+                                           mationofportionsizesforfooditems,anddiscernmentofthe
+          eating in low-light is common in some low- and middle-                    
+                                           eating scenario - such as communal eating or solitary dining.
+          incomecountries(LMICs).Thisimprovedassessmentac-                          
+                                           Additionally, it incorporates the estimation of food container
+          curacycanbeattributedtotheinherentreasoningabilities                      
+                                           volume to accurately quantify a subject’s dietary intake in
+          of GPT-4V as well as its well-established knowledge                       
+                                           uncontrolled, real-world scenarios. Liu et al. [40] devised a
+          graph to complement visual processing, enabling it to                     
+                                           systemwhichcanjointlyanalyzeadishphoto,thedescription,
+          recognize food items captured in low-light or in dark                     
+                                           and user information to rate the healthiness of the dish, and
+          effectively with a few language prompts contextualizing                   
+                                           subsequentlyprovidesuggestionsonimprovingthedietofthe
+          the specific dietary and cultural background.                             
+                                           user.MultimodalAItechniqueshavealsobeenusedtodevelop
+        • GPT-4V’sadeptnessinestimatingportionsizesisremark- food recipe retrieval systems [19]–[23], which are primarily
+          able,withtheabilitytoutilizethescaleofnearbyobjects                       
+                                           basedonlearningacommonembeddingspaceforfoodimage-
+          as a reference. This proficiency extends to logically                     
+                                           recipepairs,aligningtextualdataofrecipeswithvisualcontent
+          deducingportionsizesatbothpre-andpost-consumption,                        
+                                           of food images. Furthermore, AI researchers have developed
+          where its estimations closely align with the Weighed                      
+                                           systems that can generate a recipe for a dish based on its
+          FoodRecords(WFR),thestandardgroundtruthindietary                          
+                                           captured image [24]–[26]. Such systems commonly leverage
+          assessment, and demonstrating comparable performance                      
+                                           ahierarchicalorstructuredwayofgeneratingrecipesforfood
+          to human estimates, with GPT-4V’s error at 54.6g and                      
+                                           images, for example, by first predicting the ingredients and
+          dietitians’ at 43.6g benchmarked on a real-world dietary                  
+                                           then inferring the cooking instructions [24].
+          intake dataset [38]. This is particularly noteworthy given                
+                                            AI foundation models like GPT-4V use self-supervised
+          the complexity of the task, especially under conditions                   
+                                           learningtolearntask-agnosticrepresentationsfromlarge-scale
+          employing a monocular RGB camera without the exis-                        
+          tence of fiducial markers of a known size. 1https://fdc.nal.usda.gov/index.html
+
+                                                                                    
+                                                                                    
+       JOURNALOFLATEXCLASSFILES,VOL.14,NO.8,AUGUST2015                       3      
+                                                                                    
+         a                                       b                                  
+                  GPT-4V: Large AI Model in Recognition and Portion Size GPT-4V: Large AI Model in Nutritional analysis
+                            Estimation                                              
+                     Language Prompt                Language Prompt                 
+            Image Prompt Recognise the food types in the provided images, both before Calculate the nutritional content, including
+                      and after consumption. Use surrounding objects as references carbohydrates, protein, fat, and calories, for a 300g of
+                      for approximating portion sizes. Provide a reasonable estimate fried fish, 250g of banku, 75g of tomato sauce and
+                      in grams for the amount of each food category consumed. 20g of onion slices. Please present the results in the
+                      Please note that these food items are from Ghana and Kenya. following format: Carbohydrates: [g], Protein: [g], Fat:
+                                                    [g], Calories: [kcal].          
+                     GPT-4V                         GPT-4V                          
+                      To approximate the portion size, I'll use the cup and the plate as For 300g of fried fish, the nutritional content includes
+                      references, assuming the plate is of a standard dinner plate size, 0g of carbohydrates, 78g of protein, 33g of fat, and
+                      which is approximately 10-12 inches in diameter. Using these 606 kcal of calories.
+                      objects as a scale, we can make the following estimates:      
+                                                    For 250g of banku, it contains 120g of
+                      Food item 1 (Fried Fish): Initial portion approximately 400g; carbohydrates, 4.5g of protein, 1g of fat, and 527.5
+                      Portion consumed approximately 300g. kcal of calories.        
+                      Food item 2 (Starchy side dish, possibly banku or fufu): Initial
+                      portion approximately 300g; Portion consumed approximately For 75g of tomato sauce, it provides 3g of
+                      250g.                         carbohydrates, 0.75g of protein, 0.225g of fat, and
+                      Food item 3 (Tomato sauce): Initial portion approximately 150g; 15 kcal of calories.
+                      Portion consumed approximately 75g.                           
+                      Food item 4 (Onion slices): Initial portion approximately 50g; For 20g of onion slices, there are 1.8g of
+                      Portion consumed approximately 20g. carbohydrates, 0.22g of protein, 0.02g of fat, and 8
+                                                    kcal of calories.               
+                 c                                                                  
+                                 GPT-4V: Large AI Model in Food Recommendaton       
+                  Image Prompt                                                      
+                            Language Prompt                                         
+                            What nutrients are missing from this meal, and what could be eaten to supplement
+                            them?                                                   
+                            GPT-4V                                                  
+                            Based on the images you've provided, the meal consists of a rice dish and chicken,
+                            which likely provides a good amount of carbohydrates, protein, and fats. However, it
+                            appears to be lacking in several key areas:             
+                            Fiber: There are no visible vegetables or fruits which are essential for providing dietary
+                            fiber. To increase fiber intake, consider adding a side of mixed vegetables or a fresh
+                            salad.                                                  
+                            Vitamins and Minerals: Fresh fruits and vegetables are also important sources of
+                            vitamins and minerals. Including a variety of colored vegetables or a fruit can help fill
+                            this gap.                                               
+                            Dairy or Calcium Source: There's no dairy or alternative calcium-rich food visible.
+                            Including a serving of milk, cheese, yogurt, or calcium-fortified plant milk could help
+                            meet calcium needs.                                     
+       Fig.2. IntegrativenutritionalassessmentbyGPT-4V:displayedinthisfigurearethemultifacetedfoodanalysiscapabilitiesofGPT-4V,focusedon
+       traditional dishes from Ghana and Kenya.(a)GPT-4Vfirstrecognizesfooditemsandestimatestheconsumedportionsizeusingimagestakenbeforea
+       mealandafterconsumption,utilizingcommonutensilsasreferencepointsforscale.(b)ThisfigurehighlightsGPT-4V’sproficiencyindeterminingtheprecise
+       nutrientcontentofthemeal,providingadetailedbreakdownofcarbohydrates,proteins,fats,andcalories.(c)ThebottomsectionpresentsGPT-4V’snutritional
+       critique and enhancement suggestions for the meal, addressing the nutrient adequacy and pinpointing deficiencies in dietary fiber, vitamins, minerals, and
+       calcium, while recommending additional food items to achieve a nutritionally balanced diet. This illustration underscores GPT-4V’s potential as a tool for
+       dietaryanalysisandhealthpromotionwithindiverseculturalcontexts.              
+       data points. Peng et al. [41] previously investigated the use of a wider range of tasks, GPT-4V still face challenges such as
+       self-supervisedlearningtominediscriminativerepresentations hallucination[44],andinconsistentperformanceduringmulti-
+       from large quantity of egocentric dietary intake images, and rounddialogueespeciallyrequiringdomainknowledgesuchas
+       demonstrated that the learned image representations can facil- medical diagnosis [43].
+       itate eating-related event identification.                                   
+                                               III. DETAILEDINFORMATIONANDMETHODS   
+        Since the introduction of GPT-4V, there has been some                       
+                                           A. Data Collection                       
+       work studying its effectiveness in biomedicine and healthcare                
+       areas,forexample,inmedicalimageanalysis[42],[43].Early This study aims to analyze the effectiveness of GPT-4V
+       findings suggest that while it is a great leap towards more in conducting nutritional analysis from images taken by an
+       intelligent multimodal foundation models that can approach egocentric camera during passive dietary intake monitoring.
+
+                                                                                    
+                                                                                    
+       JOURNALOFLATEXCLASSFILES,VOL.14,NO.8,AUGUST2015                       4      
+                                                                                    
+       WeuseddietaryintakedataofadultsofKenyanandGhanaian   Carbohydrates           
+                                                            (Starchy Foods)         
+       origin living in London, collected following our study pro- Vegetables       
+       tocol [45]. Statistical data analysis and the demographics of                
+       subjectscanbefoundin[38].Participantswereassignedeither                      
+       an eButton [46] or an AIM [47] camera to passively record                    
+       theirdietaryintake.AstandardizedSalterBrecknellscalewas                      
+       usedtoinitiallyweighthefooditems,whichwerethenserved                         
+       to participants. The study deviated from traditional methods                 
+       by not requiring participants to consume all the food; instead,              
+       theywereinstructedtoeatuntiltheywerefull.Theremaining                        
+       food was then weighed again, and the difference between the                  
+       initial and final weights was recorded as the actual consumed                
+                                                   Proteins (Meat and               
+       food weight, also known as Weighed Food Records (WFR).                       
+                                                    Alternatives)                   
+       Experienced dietitians also participated to estimate the weight              
+       of the food visually as human accuracy in estimating food Fig.3. Fooddistributioninthestudy.Thisfigureillustratesthebreakdown
+       weights. Their assessments were compared with the results offooditemsutilizedinthestudy,categorizedintovegetables,carbohydrates
+                                           (starchyfoods),andproteins(meatandalternatives).
+       from GTP-4V to evaluate its performance. To ensure fairness                  
+       and accuracy, the assessors received training in recognizing                 
+       Ghanaian and Kenyan foods and in the technique of visual each food item more accurately. Additionally, we employed
+       food weight estimation.             various language prompts to test the outcomes of the portion
+                                           size estimation. The responses generated by GPT-4V were
+       B. Multimodal Foundation Model - GPT-4V                                      
+                                           structured according to the format detailed in the language
+        GPT-4V, a cutting-edge multimodal language model, prompt.Thisstructureddataformatwascrucialforsubsequent
+       demonstrates its proficiency in processing both image and nutritional analysis. To ensure the robustness and reliability
+       text inputs to generate highly skilled outputs. Built upon a of the estimated portion sizes, the methodology incorporated
+       transformer-based neural network architecture, GPT-4V has a confidence interval determination step. This step involved
+       showcased human-level performance across various profes- repeating the portion size estimation process 4 times that cap-
+       sional and academic benchmarks. While specific technical tured the variations of the model’s estimations. The language
+       details of GPT-4V are not yet disclosed by OpenAI, its prompt used for food recognition and portion size estimation
+       statusasastate-of-the-artLargeMultimodalModel(LMM)is is shown in Figure 2(a).
+       pivotal. Its application in dietary assessment raises intriguing 3) Nutritional Analysis: The next phase of the methodol-
+       questions about the potential for LMMs to achieve human- ogy focused on calculating the nutritional content of specific
+       level performance in this domain, promising significant ad- food items. Using a distinct language prompt, shown in
+       vancements in the field.            Figure2(b),GPT-4Vwasinstructedtocomputekeynutritional
+        1) Food Detection and Recognition: The challenges in- parameters,includingcarbohydrates,protein,fat,andcalories,
+       herent in existing food recognition systems primarily re- fortheidentifiedfooditems.Theoutputswerecomparedwith
+       volve around the diversity of food types. Supervised learning the ground truth (GT), derived from WFR and the nutritional
+       approaches struggle to cover the vast majority of possible data from the USDA National Nutrient Database.
+       foods, as manual labeling and training data for each food 4) Nutrient Gap Identification and Food Recommenda-
+       item can be impractical. However, this limitation is where tions: Following the retrieval of nutritional data, the method-
+       self-supervised learning emerges as a pivotal solution for ology extended its inquiry to identify potential nutrient gaps
+       the future of AI-based dietary assessment. Self-supervised within the analyzed meal. GPT-4V was prompted to identify
+       learning models, like GPT-4V, excel in handling diverse and which essential nutrients might be lacking in the meal com-
+       unstructured data. They are not reliant on explicit labeling position. Moreover, the model was asked to provide recom-
+       but instead learn from extensive datasets, including a wide mendations for supplementary foods that could be consumed
+       range of content. GPT-4V’s proficiency is underpinned by to address these identified nutrient deficiencies. This aspect
+       its extensive training on vast amounts of data from diverse of the methodology aimed to offer practical dietary guidance
+       sources,enablingittoacquireadeepandbroadunderstanding by suggesting appropriate foods to complement the analyzed
+       of various topics, including dietary information. In the initial meal and enhance its overall nutritional completeness.
+       phase of the methodology, GPT-4V was tasked with food                        
+       detection and recognition within the provided images. This                   
+                                                    IV. EXPERIMENTALRESULTS         
+       involved analyzing two separate images: one depicting the                    
+                                           A. Food Detection using GPT-4V           
+       meal before consumption and the other after consumption.                     
+        2) Portion Size Estimation: To enhance the accuracy of In this study, we first present a quantitative analysis of
+       dietaryassessment,weinstructedGPT-4Vtoeffectivelyutilize food detection capabilities using GPT-4V, with a focus on
+       contextual information from the images, including the relative understanding the influence of language prompts on the food
+       sizesandpositionsoffooditems.GPT-4V’scontextualunder- identification accuracy. Figure 3 illustrates the food distri-
+       standing enabled the model to estimate the portion sizes of bution used in the study. There are 14 African food items,
+
+                                                                                    
+                                                                                    
+       JOURNALOFLATEXCLASSFILES,VOL.14,NO.8,AUGUST2015                       5      
+                                                                                    
+                      TABLEI                                                        
+         QUANTITATIVERESULTSOFFOODDETECTIONUSINGGPT-4V                              
+                                                                                    
+                     Accuracy Precision Recall F1score                              
+            Language                                                                
+                      0.719 0.793 0.885 0.836                                       
+            Prompt                                                                  
+          LanguagePrompt                                                            
+                      0.875 0.903 0.966 0.933                                       
+        withContextualInformation                                                   
+       which can be categorized into three groups including vegeta-                 
+       bles, carbohydrates (starchy foods), and proteins (meat and                  
+       alternatives). The quantitative results, as shown in Table I,                
+       outline the accuracy, precision, recall, and F1 score of the                 
+       fooddetectionbyGPT-4V.Inscenarioswithlanguageprompts                         
+       that did not include information about the origin of food, the               
+       model’s accuracy was 71.9%, with a precision of 79.3%, a                     
+       recall of 88.5%, and an F1 score of 83.6%. In contrast, when                 
+       language prompts were enriched with contextual information                   
+       about the food’s origin, there was a notable increase in the                 
+       results of food detection. The model achieved an accuracy                    
+       of up to 87.5%, precision of 90.3%, recall of 96.6%, and                     
+       the F1 score of 93.3%. This comparison reveals a pattern:                    
+       when the origin of the food is not specified, the GPT-4V                     
+       model frequently misclassified white starchy foods as rice.                  
+       However, when prompts specified the food’s Kenyan and                        
+       Ghanianorigin,themodelaccuratelyidentifiedthefooditems                       
+       as banku or ugali, which are traditional African foods. These                
+       findings indicate that language prompts containing contextual                
+       cues about food origin can significantly enhance the LMMs’                   
+       ability to accurately identify culturally specific foods.                    
+       B. Portion Size Estimation using GPT-4V                                      
+        InFigure4,wepresentacomparativeanalysisofconsumed                           
+       portion size estimations derived from three methods including                
+       the GPT-4V, human vision, and the ground truth. The data                     
+       shows a variety of food items, each subjected to 10 unique                   
+       eating episodes within the study (See Table II for the details               
+       of each episode). Besides, the error bars, plotted for the GPT-              
+       4V estimations, are based on four separate trials, providing                 
+       insights into the model’s reliability. Remarkably, these tri-                
+       als display minimal variation, indicating the estimations are                
+       consistently close to one another. The trend observed in the                 
+       plot reveals that the GPT-4V’s predictions generally align                   
+       closely with the ground truth, showing the model’s potential                 
+       for accurate portion size estimation. In Figure 5, we further                
+       conduct a comparison between GPT-4V and human visual                         
+       assessments, utilizing the metric of Absolute Error (AE). The                
+       plot distinctly visualizes individual data points representing               
+       the absolute error for each estimation compared to the ground                
+       truth.TheGPT-4V’sestimationshaveameanabsoluteerrorof                         
+       54.6g.Incomparison,humanestimatesreflectaslightlysupe-                       
+       rioraccuracy,withalowermeanabsoluteerrorof43.6g.This                         
+       comparative analysis reveals that the performance of GPT-4V                  
+       aligns closely with that of human vision, illustrating the GPT-              
+       4V’s capability in approximating human-like estimation.                      
+        In Figure 6(a), in the analysis to determine the correla-                   
+       tion between the GPT-4V and ground truth for estimating                      
+       consumed portion sizes, we employed Pearson’s correlation                    
+                                            )marg(                                  
+                                            ezis                                    
+                                            noitrop                                 
+                                            demusnoC                                
+                                           Fig. 4. Comparison of consumed portion size estimations by different
+                                           methods. This figure presents a side-by-side comparison of portion size
+                                           estimationsforvariousfooditems.Eachfooditem,representedin10eating
+                                           episodes within this study, is plotted to illustrate the variance and accuracy
+                                           ofeachmethod’sestimate.                  
+                                           coefficient as a measure of the strength and direction of the
+                                           association between the two variables. The analysis yielded a
+                                           Pearsonrvalueof0.78,indicatingastrongpositivecorrelation
+                                           betweentheestimatesprovidedbyGPT-4Vandthoseobtained
+                                           through GT. This result is statistically significant with a p-
+                                           value of less than 0.0001. Further statistical analysis also
+                                           showed that the 95% confidence interval for the Pearson r
+                                           extends from 0.5845 to 0.8847, reinforcing the robustness
+                                           of the correlation between the GPT-4V method and GT.
+                                           For Figure 6(b), a Pearson’s correlation analysis was also
+                                           conducted to assess the relationship between human vision
+                                           estimatesandtheGTforconsumedportionsizes.Theresulting
+                                           Pearson r value of 0.77 signifies a strong positive correlation,
+                                           almost paralleling the correlation observed with the GPT-4V.
+                                           In Figure 6(c), the correlation between GPT-4V and human
+                                           vision estimates yields an r value of 0.64. This correlation
+                                           analysis demonstrates the potential of the GPT-4V, showing
+                                           again its ability to understand and process portion size esti-
+                                           mation in a manner similar to humans. Although a slightly
+                                           higher correlation does not necessarily mean that the GPT-4V
+                                           is superior, it does indicate that the GPT-4V is a promising
+                                           tool for this specific task, especially in scenarios that require
+                                           rapid and large-scale dietary assessment. Last, we conducted
+                                           the Bland-Altman analysis to evaluate the GPT-4V model. In
+                                           Figure 7(a), the Bland-Altman plot for the GPT-4V method
+                                           vs. GT confirms the model’s effectiveness, demonstrating
+                                           strong agreement in predictions of consumed portion sizes
+                                           in grams. Another Bland-Altman plot, as shown in Figure
+                                           7(b), comparing GPT-4V to human vision also indicates that
+                                           GPT-4V is consistent with human assessments, showcasing
+                                           GPT-4V’s comparable performance to human-level accuracy.
+                                           Qualitative results of sample dietary intake can also be found
+                                           in Figure 8.                             
+                                           C. The Impact of Varied Language Prompts on Portion Size
+                                           Estimation                               
+                                            We further provided a comparative analysis of the Mean
+                                           Absolute Error (MAE) in portion size estimations when em-
+                                           ploying the GPT-4V with two distinct language prompts (See
+                                           Table III). We first instructed the model to use surrounding
+                                           objects as scale references, and then we asked the model to
+
+                                                                                    
+                                                                                    
+       JOURNALOFLATEXCLASSFILES,VOL.14,NO.8,AUGUST2015                       6      
+                                                                                    
+                                        TABLEII                                     
+                       ABSOLUTEERRORINNUTRIENTESTIMATIONACROSSVARIEDEATINGEPISODES  
+       Episode No.of             AbsoluteErrorof AbsoluteErrorof AbsoluteErrorof AbsoluteErrorof AbsoluteErrorof
+                      FoodLists                                                     
+         #  FoodItems          ConsumedPortionSize(g) Carbohydrate(g) Protein(g) Fat(g) Calorie(kcal)
+                     Yam,avocado,                                                   
+         1    4                     136        12.4     2.3     7.9     94.4        
+                   spinachstew,saltedfish                                           
+         2    2   Friedrice,chickendrumstick 25 12.6    1.4     5.6     51.0        
+         3    2   Friedrice,chickendrumstick 102 46.2   8.3     6.4      6.0        
+                    Onions,tilapiafish,                                             
+         4    4                     18         36.5     2.0     16.5    110.7       
+                    tomatosoup,banku                                                
+                    Avocado,saltedfish,                                             
+         5    4                     70         5.5      2.8     10.6    99.7        
+                    yam,spinachstew                                                 
+                   Tomatosalad,roastedbeef,                                         
+         6    3                     204        5.2     39.2     29.6    390.8       
+                       ugali                                                        
+         7    2    Tomatosalad,friedrice 44    36.8     5.3     8.8     124.2       
+         8    3    Chapati,ugali,beefstew 382  99.3    40.1     12.4    628.0       
+                     Avocado,yam,                                                   
+         9    4                     71         8.0     11.3     5.9      5.7        
+                   spinachstew,saltedfish                                           
+                    Tilapiafish,onions,                                             
+         10   4                     31         68.7    27.1     12.3     1.2        
+                    tomatosoup,banku                                                
+                         Mean                                                       
+                                  Mean                                              
+                         54.6      43.6                                             
+         demusnoc                                                                   
+         fo                                                                         
+         rorre                                                                      
+         etulosbA                                                                   
+           )marg(                                                                   
+           ezis                                                                     
+           noitrop                                                                  
+                                           from WFR in conjunction with nutritional data from the
+                                           USDANationalNutrientDatabase.Thiscomparisoniscrucial
+                                           for evaluating the accuracy of the GPT-4V model’s nutrient
+                                           estimation capabilities against a well-established nutritional
+                                           standard. Table II shows the absolute error in estimated nutri-
+                                           ent content across 10 different eating episodes. Each episode
+                                           consists of a variety of food items, and the nutritional content
+                                           (carbohydrates, protein, fat, and calories) estimated by the
+                                           GPT-4V model has been aggregated for each episode. The
+                                           finding suggests that the accuracy of nutrient estimation is
+                                           highly dependent on the accuracy of the portion size estima-
+       Fig.5. ComparativeanalysisofGPT-4Vandhumanestimatesinportion tion. For instance, episodes 6 and 8 show some deviation in
+       size estimation.Itdemonstratestheabsoluteerrorinconsumedportionsize          
+                                           portionsizeestimationfromtheGT,whichinturnsignificantly
+       estimationbetweenGPT-4Vandhumanvision.Themeanabsoluteerrorfor                
+       GPT-4Vis54.6gcomparedto43.6gfromhumanestimates,showcasingGPT- impacted the accuracy of the nutritional estimates. In other
+       4V’scomparableperformancetohuman-levelaccuracyinthetaskofportion eatingepisodeswheretheportionsizeestimationwascloseto
+       sizeestimation                                                               
+                                           the actual value, the nutrients estimation tends to align close
+                                           totheircorrespondingnutritionalvalue(i.e.,calorieestimation
+                      TABLEIII                                                      
+         COMPARATIVEANALYSISOFPORTIONSIZEESTIMATIONUSING error tends to be less than 100kcal for each episode when
+           REFERENCEOBJECTSANDSTANDARDSERVINGSIZES portion size is predicted correctly). In Table IV, we further
+                                           present a comparative analysis of nutritional estimation errors
+                      MAE SD ConfidenceInterval(95%)                                
+         ReferenceObjects-based 52.9 51.3 52.9±17.8 from two different perspectives: episode-based and food item-
+        StandardServingSizes-based 57.2 49.4 57.2±17.1 based. The episode-based analysis considers the aggregate
+                                           errors from the 10 episodes mentioned earlier, while the food
+                                           item-based analysis evaluates data from 32 individual food
+       rely more on prior knowledge, e.g., relying on the standard                  
+                                           items featured across those episodes. For each perspective,
+       serving size of each food item. The first method, based on                   
+                                           the table lists the Mean Absolute Error (MAE) with a 95%
+       reference objects, yielded an MAE of 52.9g with a standard                   
+                                           ConfidenceInterval(CI)andStandardDeviation(SD)forfour
+       deviation (SD) of 51.3g. The second approach, utilizing stan-                
+                                           nutritional components: carbohydrate, protein, fat, and calorie
+       dard serving sizes, resulted in a slightly higher MAE of 57.2g               
+                                           content. Nutrient estimation for each individual food item can
+       with an SD of 49.4g. This finding is pivotal, indicating that                
+                                           be found in Figure 9.                    
+       guiding the GPT-4V to utilize scale references can facilitate                
+       portion size estimation.                                                     
+                                                        V. DISCUSSION               
+                                            In this research, we analyzed the potential of multimodal
+       D. Nutritional Analysis using GPT-4V                                         
+                                           foundation models in dietary assessment, with a particular
+        After portion size estimation, GPT-4V model was utilized focusonGPT-4V.WeinitiallydiscoveredthatGPT-4Vdemon-
+       to convert food weights into specific nutrient data, focusing stratesexceptionalcapabilitiesinfooddetection,evenwithout
+       on key dietary components: carbohydrates, protein, fat, and fine-tuning or adaptation using a food-specific dataset. In
+       calories. While GPT-4V is capable of a broader range of addition, the GPT-4V model’s ability to handle ambiguous
+       nutritional analysis, these nutrients were selected for their food items is particularly noteworthy. When provided with
+       relevance to the objectives of this study. The results obtained contextual cues in the language prompts, such as the geo-
+       were compared with the ground truth, which was derived graphical origin of a food item, the model can utilize its
+
+                                                                                    
+                                                                                    
+       JOURNALOFLATEXCLASSFILES,VOL.14,NO.8,AUGUST2015                       7      
+                                                                                    
+                                                                                    
+              Correlation between GTP-4V and GT for Correlation between human vision and Correlation between GTP-4V and human
+                  consumed portion size GT for consumed portion size vision for consumed portion size
+                           r=0.78                r=0.77                 r=0.64 P<0.0001 P<0.0001 P<0.0001 )marg(
+                                                                                    
+           hturt                                                                    
+           dnuorG                                                                   
+                                 )marg(                                             
+                                 hturt                                              
+                                 dnuorG                                             
+                  GTP-4V (gram)         Human vision (gram)     GTP-4V (gram)       
+                                                       )marg(                       
+                                                       noisiv                       
+                                                       namuH                        
+         a                       b                      c                           
+       Fig.6. ComparativeanalysisofGTP-4V’spredictionsandhumanestimatesagainstgroundtruthforconsumedportionsizeestimation.(a)Correlation
+       plotforGTP-4V’spredictionsvs.groundtruthinportionsize,withahighcorrelationcoefficient(r=0.78,P<0.0001),suggestingthemodel’seffectiveness
+       in this specific task of portion estimation (b) Correlation plot for human estimates vs. ground truth in portion size, showing strong agreement (r = 0.77, P
+       <0.0001).(c)CorrelationplotcomparingGTP-4V’spredictionswithhumanestimates(r=0.64,P<0.0001).
+                                        TABLEIV                                     
+              COMPARATIVEANALYSISOFNUTRITIONALESTIMATIONERRORS:EPISODE-BASEDVS.FOODITEM-BASEDAPPROACHES
+                    Sample MAEofcarbohydrate, MAEofprotein, MAEoffat, MAEofcalorie, 
+                                    SD           SD        SD          SD           
+                     size  CI(95%)(g)   CI(95%)(g)  CI(95%)(g) CI(95%)(kcal)        
+           Fooditem-based 32 12.3±6.1 17.7 6.5±3.6 10.4 4.1±2.1 6.1 69.2±34.7 100.2 
+            Episode-based 10 33.1±19.4 31.4 14.0±9.6 15.5 11.6±4.5 7.2 151.2±125.3 202.1
+                                   +1.96SD                                          
+                                    157.8                                           
+                                    Mean                                            
+                                    31.5                                            
+                                   -1.96SD                                          
+                                    -94.8                                           
+                   Average of two measures                                          
+          -TPG                                                                      
+          neewteb                                                                   
+          ecnereffiD                                                                
+            TG                                                                      
+            dna                                                                     
+            V4                                                                      
+                                   +1.96SD                                          
+                                    195.9                                           
+                                    Mean                                            
+                                     26.0                                           
+                                   -1.96SD                                          
+                                    -144.0                                          
+                   Average of two measures                                          
+          -TPG                                                                      
+          neewteb                                                                   
+          ecnereffiD                                                                
+           noisiv                                                                   
+           namuh                                                                    
+           dna                                                                      
+           V4                                                                       
+                                           as shown in Figure 10. In scenarios lacking of guidance, the
+         a                                                                          
+                                           modelmaydefaulttoidentifyingmorecommonlyknownfood
+                                           items,suchasriceandbread.However,uponreceivingspecific
+                                           language prompts (e.g., African cuisine), the GPT-4V model
+                                           demonstrates a remarkable ability to adjust its deduction and
+                                           accurately identify regional food items, like banku.
+                                            Although GPT-4V has certain capabilities, we also noticed
+                                           that it is not specifically designed to understand complex spa-
+                                           tial relationships or perform precise spatial analysis tasks. For
+                                           instance, when estimating the volume or portion size of food
+         b                                 items, precise spatial perception is required to identify and
+                                           calculate the 3D attributes of objects, which typically exceeds
+                                           the capabilities of GPT-4V, and it may not be mature enough
+                                           toaccuratelyestimatetheportionsize.Inourexperiments,we
+                                           observed that consumed food items weighing less than 30g
+                                           could not be easily estimated by the model. Nevertheless, it is
+                                           still capable of achieving a close human-level accuracy in the
+                                           task of portion size estimation.         
+                                            Whilethisstudyismainlyfocusedonsolitaryeating,eating
+                                           is sometimes a social activity, and in many cultures and
+                                           countries such as African and Asian countries, communal
+                                           eating and food sharing are very common. Food sharing sce-
+       Fig. 7. Bland-Altman analyses. (a) This Bland-Altman plot compares the narios require analyzing the entire eating episode to quantify
+       GPT-4VmodeltoGT(b)ThisBland-AltmanplotcomparesGPT-4Vtohuman each individual dietary intake [48], [49]. While GPT-4V can
+       vision. The vast majority of data points fall within the limits of agreement 
+                                           understand short video clips, its video analysis ability needs
+       in these two plots, showcasing that there is a good agreement between the    
+       methods.                            to be improved so that long dietary intake episodes can be
+                                           analyzed to estimate food and nutrient intake in food sharing
+                                           or communal eating scenarios. Furthermore, the Be My Eye
+       extensiveknowledgebasetorefineitsrecognition.Thisshows application[50]whichispoweredbyGPT-4Vtoassistvisually
+       a sophisticated level of contextual understanding embedded impaired or blind people as proxy eyes may inspire the inte-
+       in the model, allowing it to utilize external information ef- gration or connection of foundation models like GPT-4V with
+       fectively to enhance its recognition accuracy. Moreover, our dietary intake monitoring and assessment systems [46], [47],
+       research highlighted the model’s capability to handle images providing a new level of on-node intelligence and facilitating
+       withlowvisibility,suchasthosecapturedindarkenvironment, pervasive dietary intake monitoring and assessment.
+
+                                                                                    
+                                                                                    
+       JOURNALOFLATEXCLASSFILES,VOL.14,NO.8,AUGUST2015                       8      
+                                                                                    
+                                                                                    
+                                                                                    
+                       Food item 1 (Fried Fish): Initial portion                    
+                       approximately 400g (291g); Portion consumed Food item 1 (Yam or similar starchy food):
+                       approximately 300g (291g).          Initial portion approximately 300g (236g);
+                       Food item 2 (Starchy side dish, possibly banku Portion consumed approximately 300g (236g).
+                       or fufu): Initial portion approximately 300g Food item 2 (Cooked greens, possibly sukuma
+                       (414g); Portion consumed approximately wiki or a similar dish --> Spinach stew): Initial
+                       250g (346g).                        portion approximately 150g (120g); Portion
+                       Food item 3 (Tomato sauce): Initial portion consumed approximately 150g (120g).
+                       approximately 150g (167g); Portion consumed Food item 3 (Avocado slice): Initial portion
+                       approximately 75g (75g).            approximately 40g (40g); Portion consumed
+                       Food item 4 (Onion slices): Initial portion approximately 40g (25g).
+                       approximately 50g (20g); Portion consumed                    
+                       approximately 20g (17g).                                     
+                       Food item 1 (Starchy food, likely Yam or Fufu): Food item 1 (Fish): Initial portion approximately
+                       Initial portion approximately 350g (263g); 225g (181g); Portion consumed approximately
+                       Portion consumed approximately 175g (119g). 150g (181g).     
+                       Food item 2 (Leafy greens --> Avocado): Initial Food item 2 (Starchy food likely banku or fufu):
+                       portion approximately 30g (27g); Portion Initial portion approximately 350g (304g);
+                       consumed approximately 30g (27g).   Portion consumed approximately 225g (238g).
+                       Food item 3 (Spinach stew): Initial portion Food item 3 (Onion): Initial portion
+                       approximately 175g (115g); Portion consumed approximately 75g (25g); Portion consumed
+                       approximately 155g (115g).          approximately 65g (12g). 
+                       Food item 4 (Fish): Initial portion approximately Food item 4 (Tomato-based sauce or salsa):
+                       30g (13g); Portion consumed approximately Initial portion approximately 100g (149g);
+                       30g (13g).                          Portion consumed approximately 90g (117g).
+       Fig. 8. Qualitative results of sample dietary intake. This figure presents a selection of meals with itemized descriptions, highlighting the initial portion
+       sizes and the amounts consumed by study participants. Green labels indicate correctly recognized food items, while red labels point to errors. The orange
+       labelshowstheestimatedvalue.Thebluelabelattheendofeachdescriptionspecifiestheactualportionsize,servingasthegroundtruth.
+        Nevertheless, the use of AI foundation models in dietary sizeestimationerrorsbyGPT-4V,anotherwayworthexploring
+       assessment faces other obstacles. Inadequate or biased data in future work and may produce more robust dietary intake
+       canresultininaccurateorbiasedresults.Forinstance,without assessment is to estimate the bite size and count the number
+       providing contextual cues, GPT-4V tends to recognize typ- of bites [10] as previous study has revealed the correlation
+       ical African food like banku as rice or bread. In addition, between bite counts and dietary intake [51]. Additionally,
+       the complexity of multimodal foundation models can make there are several potential approaches to enhancing the spatial
+       them difficult to understand and interpret, which may lead perception abilities of large multimodal models (LMMs) so
+       to mistrust, misuse, and resistance among users. There are as to improve the accuracy in estimating portion sizes. One
+       also potential risks and ethical considerations associated with suchmethodinvolvestheuseofdepthimage.Datafromdepth
+       using AI foundation models in dietary assessment. One major cameras, which offer detailed information about the distances
+       risk is the potential misuse of dietary data and adversarially and dimensions of object items, can be used to train LMMs.
+       prompting foundation models, which may result in revealing Thisintegrationofdepthinformationwouldprovidethemodel
+       sensitive information about an individual’s health status or with a richer understanding of an object’s position and size
+       sensitive personal information [39], especially those inside within a given space, significantly improving its ability to
+       the training dataset. There is also the risk of inaccurate estimate portion sizes accurately. Another approach is the
+       dietary recommendations due to errors or biases in the AI utilization of 3D simulation data/physics engines. Training
+       algorithms as well as in the data used to develop them, which LMMs with data derived from these environments could lead
+       could have negative health implications. Furthermore, there to a substantial improvement in their comprehension of 3D
+       is a need for transparency in how the underlying mechanism spaces.Suchenvironmentsofferamorerealisticrepresentation
+       of AI foundation models work and make decisions about of objects and their spatial relationships, which could be
+       dietaryassessment,aswellassafeguardstoensuretheprivacy, invaluable for the model’s learning process and subsequent
+       accuracy, and security of dietary data. application in real-world scenarios. Considering the current
+                                           capabilities of GPT models to interpret PDF content, a future
+                VI. FUTUREDIRECTIONS       enhancement in the field of dietary assessment could see
+                                           dietitiansincorporatinghealthstandardsorStandardOperating
+        To achieve better performance in dietary assessment, accu-                  
+                                           Procedures (SOPs) into these documents. GPT models could
+       racy in portion size estimation is crucial. To mitigate portion              
+
+                                                                                    
+                                                                                    
+       JOURNALOFLATEXCLASSFILES,VOL.14,NO.8,AUGUST2015                       9      
+                                                                                    
+                                                                                    
+       )g(                                                                          
+       etardyhobraC                                                                 
+                                                                                    
+                                                                                    
+                                                                                    
+       )g(                                                                          
+       nietorP                                                                      
+                                                                                    
+                                                                                    
+       )g(                                                                          
+       taF                                                                          
+                                                                                    
+                                                                                    
+       )lack(                                                                       
+       eirolaC                                                                      
+                                           Fig. 10. Images of food samples captured in low-light conditions. In
+                                           a dimly lit setting, the absence of contextual language prompts may lead
+                                           GPT-4V to mis-recognize foods, often defaulting to common items such as
+                                           rice and bread. However, when provided with language prompts that offer
+                                           foods’origin,GPT-4V’sperformanceinidentifyingthecorrectfooditemsis
+                                           improved,correctlyrecognizingitemslikebankuandugali.
+       Fig.9. Nutrient estimation for various food items.Thisfigureshowsthe [3] FotiosSKonstantakopoulos,EleniIGeorga,andDimitriosIFotiadis.A
+       GPT-4Vmodel’spredictionsforcarbohydrate,protein,fat,andcaloriecontent reviewofimage-basedfoodrecognitionandvolumeestimationartificial
+       ofvariousfooditemscomparedwithGT.      intelligencesystems. IEEEReviewsinBiomedicalEngineering,2023.
+                                            [4] Lukas Bossard, Matthieu Guillaumin, and Luc Van Gool. Food-101–
+                                              mining discriminative components with random forests. In Computer
+       leverage this information to conduct dietary assessments that Vision–ECCV 2014: 13th European Conference, Zurich, Switzerland,
+                                              September 6-12, 2014, Proceedings, Part VI 13, pages 446–461.
+       arebothstandardizedaccordingtoprofessionalguidelinesand                      
+                                              Springer,2014.                        
+       customized to individual requirements. This would take AI- [5] JianingQiu,FrankP-WLo,YingnanSun,SiyaoWang,andBennyLo.
+       based dietary assessment to a new level of precision and Mining discriminative food regions for accurate food recognition. In
+                                              BritishMachineVisionConference(BMVC),2019.
+       personalization, closely aligning it with the nuanced demands                
+                                            [6] ShuqiangJiang,WeiqingMin,LinhuLiu,andZhengdongLuo. Multi-
+       of nutritional counseling and health management. scale multi-view deep feature aggregation for food recognition. IEEE
+                                              TransactionsonImageProcessing,29:265–276,2019.
+                                            [7] Weiqing Min, Linhu Liu, Zhengdong Luo, and Shuqiang Jiang.
+                   VII. CONCLUSION            Ingredient-guided cascaded multi-attention network for food recogni-
+                                              tion. In Proceedings of the 27th ACM International Conference on
+        In conclusion, this study underscores the potential of GPT- Multimedia,pages1331–1339,2019.
+       4V, a multimodal foundation model powering the latest Chat- [8] WeiqingMin,ZhilingWang,YuxinLiu,MengjiangLuo,LipingKang,
+                                              Xiaoming Wei, Xiaolin Wei, and Shuqiang Jiang. Large scale visual
+       GPT, in transforming the field of dietary assessment. It                     
+                                              foodrecognition. IEEETransactionsonPatternAnalysisandMachine
+       demonstrates a high accuracy rate of up to 87.5% in food Intelligence,2023.  
+       detectionundervariousconditionswithoutspecificfine-tuning. [9] JingjingChenandChong-WahNgo. Deep-basedingredientrecognition
+                                              for cooking recipe retrieval. In Proceedings of the 24th ACM interna-
+       Its ability to accurately identify a wide range of foods, from               
+                                              tionalconferenceonMultimedia,pages32–41,2016.
+       common staples to regional dishes like banku and ugali, by                   
+                                           [10] JianingQiu,FrankP-WLo,ShuoJiang,Ya-YenTsai,YingnanSun,and
+       utilizingspecificlanguageprompts,isparticularlynoteworthy. BennyLo. Countingbitesandrecognizingconsumedfoodfromvideos
+       Additionally, GPT-4V’s contextual awareness allows it to use forpassivedietarymonitoring. IEEEJournalofBiomedicalandHealth
+                                              Informatics,25(5):1471–1482,2020.     
+       surrounding objects as a scale reference, thereby enhancing                  
+                                           [11] Fotios S Konstantakopoulos, Eleni I Georga, and Dimitrios I Fotiadis.
+       its precision in estimating portion sizes and converting these Anautomatedimage-baseddietaryassessmentsystemformediterranean
+       into nutritional content. This capability highlights GPT-4V’s foods. IEEE Open Journal of Engineering in Medicine and Biology,
+                                              2023.                                 
+       immense potential to revolutionize nutritional science and                   
+                                           [12] Xiongwei Wu, Xin Fu, Ying Liu, Ee-Peng Lim, Steven CH Hoi, and
+       dietary assessment methodologies.      QianruSun. Alarge-scalebenchmarkforfoodimagesegmentation. In
+                                              Proceedingsofthe29thACMInternationalConferenceonMultimedia,
+                                              pages506–515,2021.                    
+                    REFERENCES             [13] FrankP-WLo,YingnanSun,JianingQiu,andBennyLo. Foodvolume
+                                              estimation based on deep learning view synthesis from a single depth
+       [1] Jee-Seon Shim, Kyungwon Oh, and Hyeon Chang Kim. Dietary map. Nutrients,10(12):2005,2018.
+         assessmentmethodsinepidemiologicstudies.Epidemiologyandhealth, [14] Frank P-W Lo, Yingnan Sun, Jianing Qiu, and Benny Lo. A novel
+         36,2014.                             vision-basedapproachfordietaryassessmentusingdeeplearningview
+       [2] FrankP-WLo,YingnanSun,JianingQiu,andBennyLo. Image-based synthesis. In 2019 IEEE 16th International Conference on Wearable
+         food classification and volume estimation for dietary assessment: A andImplantableBodySensorNetworks(BSN),pages1–4.IEEE,2019.
+         review.IEEEjournalofbiomedicalandhealthinformatics,24(7):1926– [15] Frank P-W Lo, Yingnan Sun, Jianing Qiu, and Benny PL Lo.
+         1939,2020.                           Point2volume:Avision-baseddietaryassessmentapproachusingview
+
+                                                                                    
+                                                                                    
+       JOURNALOFLATEXCLASSFILES,VOL.14,NO.8,AUGUST2015                       10     
+                                                                                    
+         synthesis. IEEETransactionsonIndustrialInformatics,16(1):577–586, [34] MichaelMoor,OishiBanerjee,ZahraShakeriHosseinAbad,HarlanM
+         2019.                                Krumholz, Jure Leskovec, Eric J Topol, and Pranav Rajpurkar. Foun-
+       [16] Frank P-W Lo, Yao Guo, Yingnan Sun, Jianing Qiu, and Benny Lo. dation models for generalist medical artificial intelligence. Nature,
+         Anintelligentvision-basednutritionalassessmentmethodforhandheld 616(7956):259–265,2023.
+         fooditems. IEEETransactionsonMultimedia,2022. [35] Jianing Qiu, Lin Li, Jiankai Sun, Jiachuan Peng, Peilun Shi, Ruiyang
+       [17] Ya Lu, Thomai Stathopoulou, and Stavroula Mougiakakou. Partially Zhang,YinzhaoDong,KyleLam,FrankP-WLo,BoXiao,etal. Large
+         supervised multi-task network for single-view dietary assessment. In aimodelsinhealthinformatics:Applications,challenges,andthefuture.
+         2020 25th International Conference on Pattern Recognition (ICPR), IEEEJournalofBiomedicalandHealthInformatics,2023.
+         pages8156–8163.IEEE,2021.         [36] Jianing Qiu, Jian Wu, Hao Wei, Peilun Shi, Minqing Zhang, Yunyun
+       [18] Ya Lu, Thomai Stathopoulou, Maria F Vasiloglou, Stergios Sun, Lin Li, Hanruo Liu, Hongyi Liu, Simeng Hou, et al. Visionfm:
+         Christodoulidis, Zeno Stanga, and Stavroula Mougiakakou. An a multi-modal multi-task vision foundation model for generalist oph-
+         artificial intelligence-based system to assess nutrient intake for thalmicartificialintelligence. arXivpreprintarXiv:2310.04992,2023.
+         hospitalisedpatients. IEEEtransactionsonmultimedia,23:1136–1147, [37] OpenAI. Gpt-4v(ision)systemcard. 2023.
+         2020.                             [38] Modou L Jobarteh, Megan A McCrory, Benny Lo, Konstantinos K
+       [19] AmaiaSalvador,NicholasHynes,YusufAytar,JavierMarin,FerdaOfli, Triantafyllidis,JianingQiu,JenniferPGriffin,EdwardSazonov,Mingui
+         IngmarWeber,andAntonioTorralba.Learningcross-modalembeddings Sun, Wenyan Jia, Tom Baranowski, et al. Evaluation of acceptability,
+         for cooking recipes and food images. In Proceedings of the IEEE functionality, and validity of a passive image-based dietary intake
+         conference on computer vision and pattern recognition, pages 3020– assessmentmethodinadultsandchildrenofghanaianandkenyanorigin
+         3028,2017.                           livinginlondon,uk. Nutrients,15(18):4075,2023.
+       [20] Jing-jing Chen, Chong-Wah Ngo, and Tat-Seng Chua. Cross-modal [39] JianingQiu,FrankP-WLo,XiaoGu,ModouLJobarteh,WenyanJia,
+         recipe retrieval with rich food attributes. In Proceedings of the 25th TomBaranowski,MatildaSteiner-Asiedu,AlexKAnderson,MeganA
+         ACMinternationalconferenceonMultimedia,pages1771–1779,2017. McCrory, Edward Sazonov, et al. Egocentric image captioning for
+       [21] Jing-JingChen,Chong-WahNgo,Fu-LiFeng,andTat-SengChua.Deep privacy-preservedpassivedietaryintakemonitoring. IEEETransactions
+         understandingofcookingprocedureforcross-modalreciperetrieval. In onCybernetics,2023.
+         Proceedingsofthe26thACMinternationalconferenceonMultimedia, [40] Qi Liu, Yue Zhang, Zhenguang Liu, Ye Yuan, Li Cheng, and Roger
+         pages1020–1028,2018.                 Zimmermann. Multi-modal multi-task learning for automatic dietary
+       [22] Bin Zhu, Chong-Wah Ngo, Jingjing Chen, and Yanbin Hao. R2gan: assessment. In Proceedings of the AAAI Conference on Artificial
+         Cross-modal recipe retrieval with generative adversarial network. In Intelligence,volume32,2018.
+         Proceedings of the IEEE/CVF Conference on Computer Vision and [41] Jiachuan Peng, Peilun Shi, Jianing Qiu, Xinwei Ju, Frank P-W Lo,
+         PatternRecognition,pages11477–11486,2019. XiaoGu,WenyanJia,TomBaranowski,MatildaSteiner-Asiedu,AlexK
+       [23] AmaiaSalvador,ErhanGundogdu,LorisBazzani,andMichaelDonoser. Anderson,etal. Clusteringegocentricimagesinpassivedietarymoni-
+         Revamping cross-modal recipe retrieval with hierarchical transformers toringwithself-supervisedlearning. In2022IEEE-EMBSInternational
+         andself-supervisedlearning. InProceedingsoftheIEEE/CVFConfer- ConferenceonBiomedicalandHealthInformatics(BHI),pages01–04.
+         enceonComputerVisionandPatternRecognition,pages15475–15484, IEEE,2022.     
+         2021.                             [42] Zhengyuan Yang, Linjie Li, Kevin Lin, Jianfeng Wang, Chung-Ching
+       [24] Amaia Salvador, Michal Drozdzal, Xavier Giro´-i Nieto, and Adriana Lin, Zicheng Liu, and Lijuan Wang. The dawn of lmms: Preliminary
+         Romero. Inverse cooking: Recipe generation from food images. In explorations with gpt-4v (ision). arXiv preprint arXiv:2309.17421, 9,
+         Proceedings of the IEEE/CVF Conference on Computer Vision and 2023.        
+         PatternRecognition,pages10453–10462,2019. [43] Chaoyi Wu, Jiayu Lei, Qiaoyu Zheng, Weike Zhao, Weixiong Lin,
+       [25] Hao Wang, Guosheng Lin, Steven CH Hoi, and Chunyan Miao. Xiaoman Zhang, Xiao Zhou, Ziheng Zhao, Ya Zhang, Yanfeng Wang,
+         Structure-awaregenerationnetworkforrecipegenerationfromimages. etal.Cangpt-4v(ision)servemedicalapplications?casestudiesongpt-
+         InComputerVision–ECCV2020:16thEuropeanConference,Glasgow, 4vformultimodalmedicaldiagnosis. arXivpreprintarXiv:2310.09909,
+         UK,August23–28,2020,Proceedings,PartXXVII16,pages359–374. 2023.            
+         Springer,2020.                    [44] Chenhang Cui, Yiyang Zhou, Xinyu Yang, Shirley Wu, Linjun Zhang,
+       [26] HaoWang,GuoshengLin,StevenCHHoi,andChunyanMiao.Learning James Zou, and Huaxiu Yao. Holistic analysis of hallucination
+         structuralrepresentationsforrecipegenerationandfoodretrieval. IEEE in gpt-4v (ision): Bias and interference challenges. arXiv preprint
+         TransactionsonPatternAnalysisandMachineIntelligence,45(3):3363– arXiv:2311.03287,2023.
+         3377,2022.                        [45] ModouLJobarteh,MeganAMcCrory,BennyLo,MinguiSun,Edward
+       [27] YujieDong,JennaScisco,MikeWilson,EricMuth,andAdamHoover. Sazonov, Alex K Anderson, Wenyan Jia, Kathryn Maitland, Jianing
+         Detectingperiodsofeatingduringfree-livingbytrackingwristmotion. Qiu, Matilda Steiner-Asiedu, et al. Development and validation of an
+         IEEE journal of biomedical and health informatics, 18(4):1253–1260, objective, passive dietary assessment method for estimating food and
+         2013.                                nutrient intake in households in low-and middle-income countries: A
+       [28] YiruShen,JamesSalley,EricMuth,andAdamHoover. Assessingthe studyprotocol. Currentdevelopmentsinnutrition,4(2):nzaa020,2020.
+         accuracy of a wrist motion tracking method for counting bites across [46] Mingui Sun, Lora E Burke, Thomas Baranowski, John D Fernstrom,
+         demographicandfoodvariables.IEEEjournalofbiomedicalandhealth HongZhang,Hsin-ChenChen,YichengBai,YuechengLi,ChengliuLi,
+         informatics,21(3):599–606,2016.      YaofengYue,etal. Anexploratorystudyonachest-worncomputerfor
+       [29] AddythiaSaphala,RuiZhang,andOliverAmft.Proximity-basedeating evaluationofdiet,physicalactivityandlifestyle. Journalofhealthcare
+         event detection in smart eyeglasses with expert and data models. In engineering,6:1–22,2015.
+         Proceedings of the 2022 ACM International Symposium on Wearable [47] AbulDoulah,TonmoyGhosh,DelwarHossain,MasudulHImtiaz,and
+         Computers,pages59–63,2022.           Edward Sazonov. “automatic ingestion monitor version 2”–a novel
+       [30] KonstantinosKyritsis,ChristosDiou,andAnastasiosDelopoulos.Mod- wearabledeviceforautomaticfoodintakedetectionandpassivecapture
+         eling wrist micromovements to measure in-meal eating behavior from of food images. IEEE journal of biomedical and health informatics,
+         inertialsensordata.IEEEJournalofBiomedicalandHealthInformatics, 25(2):568–576,2020.
+         23(6):2325–2334,2019.             [48] JianingQiu,FrankP-WLo,andBennyLo.Assessingindividualdietary
+       [31] Konstantinos Kyritsis, Christos Diou, and Anastasios Delopoulos. A intakeinfoodsharingscenarioswitha360cameraanddeeplearning.In
+         data driven end-to-end approach for in-the-wild monitoring of eating 2019IEEE16thInternationalConferenceonWearableandImplantable
+         behaviorusingsmartwatches. IEEEJournalofBiomedicalandHealth BodySensorNetworks(BSN),pages1–4.IEEE,2019.
+         Informatics,25(1):22–34,2020.     [49] Jiabao Lei, Jianing Qiu, Frank P-W Lo, and Benny Lo. Assessing
+       [32] Javier Marın, Aritro Biswas, Ferda Ofli, Nicholas Hynes, Amaia Sal- individualdietaryintakeinfoodsharingscenarioswithfoodandhuman
+         vador,YusufAytar,IngmarWeber,andAntonioTorralba. Recipe1m+: posedetection. InPatternRecognition.ICPRInternationalWorkshops
+         Adatasetforlearningcross-modalembeddingsforcookingrecipesand andChallenges:VirtualEvent,January10–15,2021,Proceedings,Part
+         food images. IEEE Transactions on Pattern Analysis and Machine V,pages549–557.Springer,2021.
+         Intelligence,43(1):187–203,2021.  [50] OpenAI. Bemyeyes. 2023.             
+       [33] RishiBommasani,DrewAHudson,EhsanAdeli,RussAltman,Simran [51] Yujie Dong, Adam Hoover, Jenna Scisco, and Eric Muth. A new
+         Arora,SydneyvonArx,MichaelSBernstein,JeannetteBohg,Antoine methodformeasuringmealintakeinhumansviaautomatedwristmotion
+         Bosselut, Emma Brunskill, et al. On the opportunities and risks of tracking.Appliedpsychophysiologyandbiofeedback,37:205–215,2012.
+         foundationmodels. arXivpreprintarXiv:2108.07258,2021.                      

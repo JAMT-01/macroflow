@@ -1,0 +1,220 @@
+{
+  "createdAt": "2026-08-13T21:14:57.036Z",
+  "summary": {
+    "pipeline": "single-photo-v2-plate25",
+    "model": "google/gemini-3.6-flash",
+    "cases": 3,
+    "calorieMae": 49.06666666666666,
+    "massMae": 30.666666666666668,
+    "macroMae": 4.533333333333331,
+    "calorieRangeCoverage": 1,
+    "averageCostUsd": 0.003217,
+    "averageLatencyMs": 6271.333333333333
+  },
+  "runs": [
+    {
+      "id": "nutrition5k-1557862783",
+      "name": "Steak, chicken & cauliflower",
+      "truth": {
+        "mass": 258,
+        "calories": 443,
+        "protein": 50.4,
+        "carbs": 3.9,
+        "fat": 24.9
+      },
+      "predicted": {
+        "mass": 300,
+        "calories": 418,
+        "protein": 58.599999999999994,
+        "carbs": 5,
+        "fat": 16.7
+      },
+      "errors": {
+        "mass": 42,
+        "calories": 25,
+        "protein": 8.199999999999996,
+        "carbs": 1.1,
+        "fat": 8.2
+      },
+      "calorieRange": {
+        "low": 293,
+        "high": 543
+      },
+      "calorieCovered": true,
+      "confidence": 0.64,
+      "measurement": {
+        "plateDiameterCm": 25,
+        "plateProfile": "round-flat",
+        "plateVisible": true,
+        "wholePlateVisible": true,
+        "plateUsedAsScale": false,
+        "viewAngleDeg": 80,
+        "scaleConfidence": "low",
+        "captureQuality": "good",
+        "explanation": "The plate is fully visible, but it appears to be a disposable paper plate rather than the standard 25 cm reference plate."
+      },
+      "costUsd": 0.00273825,
+      "latencyMs": 7858,
+      "items": [
+        {
+          "name": "Lean beef steak",
+          "grams": 110,
+          "gramsLow": 77,
+          "gramsHigh": 143
+        },
+        {
+          "name": "Steamed Cauliflower Florets",
+          "grams": 100,
+          "gramsLow": 70,
+          "gramsHigh": 130
+        },
+        {
+          "name": "Chicken breast, cooked",
+          "grams": 90,
+          "gramsLow": 63,
+          "gramsHigh": 117
+        }
+      ]
+    },
+    {
+      "id": "nutrition5k-1558459115",
+      "name": "Fruit, rice & almonds",
+      "truth": {
+        "mass": 298,
+        "calories": 271.5,
+        "protein": 6.6,
+        "carbs": 43.5,
+        "fat": 10.5
+      },
+      "predicted": {
+        "mass": 345,
+        "calories": 347,
+        "protein": 8.3,
+        "carbs": 54.39999999999999,
+        "fat": 13.2
+      },
+      "errors": {
+        "mass": 47,
+        "calories": 75.5,
+        "protein": 1.700000000000001,
+        "carbs": 10.899999999999991,
+        "fat": 2.6999999999999993
+      },
+      "calorieRange": {
+        "low": 246,
+        "high": 457
+      },
+      "calorieCovered": true,
+      "confidence": 0.64,
+      "measurement": {
+        "plateDiameterCm": 25,
+        "plateProfile": "round-flat",
+        "plateVisible": true,
+        "wholePlateVisible": true,
+        "plateUsedAsScale": false,
+        "viewAngleDeg": 80,
+        "scaleConfidence": "low",
+        "captureQuality": "good",
+        "explanation": "The plate is square with rounded corners rather than the standard circular 25cm plate described in default scale reference, so reference scale is not directly applied."
+      },
+      "costUsd": 0.003297,
+      "latencyMs": 5286,
+      "items": [
+        {
+          "name": "Apple",
+          "grams": 150,
+          "gramsLow": 105,
+          "gramsHigh": 195
+        },
+        {
+          "name": "White rice, cooked",
+          "grams": 60,
+          "gramsLow": 42,
+          "gramsHigh": 80
+        },
+        {
+          "name": "Tomato",
+          "grams": 60,
+          "gramsLow": 42,
+          "gramsHigh": 78
+        },
+        {
+          "name": "Grapes",
+          "grams": 50,
+          "gramsLow": 35,
+          "gramsHigh": 65
+        },
+        {
+          "name": "Almonds",
+          "grams": 25,
+          "gramsLow": 18,
+          "gramsHigh": 33
+        }
+      ]
+    },
+    {
+      "id": "nutrition5k-1558546663",
+      "name": "Apple, spinach & almonds",
+      "truth": {
+        "mass": 197,
+        "calories": 330.7,
+        "protein": 10.6,
+        "carbs": 30.3,
+        "fat": 22.1
+      },
+      "predicted": {
+        "mass": 200,
+        "calories": 284,
+        "protein": 8.3,
+        "carbs": 28.799999999999997,
+        "fat": 17.900000000000002
+      },
+      "errors": {
+        "mass": 3,
+        "calories": 46.69999999999999,
+        "protein": 2.299999999999999,
+        "carbs": 1.5000000000000036,
+        "fat": 4.199999999999999
+      },
+      "calorieRange": {
+        "low": 243,
+        "high": 339
+      },
+      "calorieCovered": true,
+      "confidence": 0.84,
+      "measurement": {
+        "plateDiameterCm": 25,
+        "plateProfile": "round-flat",
+        "plateVisible": true,
+        "wholePlateVisible": true,
+        "plateUsedAsScale": true,
+        "viewAngleDeg": 80,
+        "scaleConfidence": "high",
+        "captureQuality": "good",
+        "explanation": "The light blue plate is fully visible from near overhead, allowing the 25 cm diameter reference to be used as a scale."
+      },
+      "costUsd": 0.00361575,
+      "latencyMs": 5670,
+      "items": [
+        {
+          "name": "Apple",
+          "grams": 150,
+          "gramsLow": 128,
+          "gramsHigh": 175
+        },
+        {
+          "name": "Almonds",
+          "grams": 35,
+          "gramsLow": 30,
+          "gramsHigh": 42
+        },
+        {
+          "name": "Fresh Spinach/Greens",
+          "grams": 15,
+          "gramsLow": 10,
+          "gramsHigh": 22
+        }
+      ]
+    }
+  ]
+}

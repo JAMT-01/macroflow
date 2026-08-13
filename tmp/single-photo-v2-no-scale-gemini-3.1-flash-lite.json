@@ -1,0 +1,220 @@
+{
+  "createdAt": "2026-08-13T21:11:08.453Z",
+  "summary": {
+    "pipeline": "single-photo-v2",
+    "model": "google/gemini-3.1-flash-lite",
+    "cases": 3,
+    "calorieMae": 80.39999999999999,
+    "massMae": 72.33333333333333,
+    "macroMae": 6.866666666666667,
+    "calorieRangeCoverage": 0.6666666666666666,
+    "averageCostUsd": 0.0018335,
+    "averageLatencyMs": 7699.666666666667
+  },
+  "runs": [
+    {
+      "id": "nutrition5k-1557862783",
+      "name": "Steak, chicken & cauliflower",
+      "truth": {
+        "mass": 258,
+        "calories": 443,
+        "protein": 50.4,
+        "carbs": 3.9,
+        "fat": 24.9
+      },
+      "predicted": {
+        "mass": 300,
+        "calories": 417,
+        "protein": 58.099999999999994,
+        "carbs": 5,
+        "fat": 17.4
+      },
+      "errors": {
+        "mass": 42,
+        "calories": 26,
+        "protein": 7.699999999999996,
+        "carbs": 1.1,
+        "fat": 7.5
+      },
+      "calorieRange": {
+        "low": 292,
+        "high": 542
+      },
+      "calorieCovered": true,
+      "confidence": 0.64,
+      "measurement": {
+        "plateDiameterCm": 25,
+        "plateProfile": "round-flat",
+        "plateVisible": true,
+        "wholePlateVisible": true,
+        "plateUsedAsScale": false,
+        "viewAngleDeg": 0,
+        "scaleConfidence": "low",
+        "captureQuality": "good",
+        "explanation": "The user specified that the plate is not their usual 25 cm plate and its size is unknown. Therefore, no scale was applied, and estimates are based on typical serving sizes for this type of plate."
+      },
+      "costUsd": 0.0017305,
+      "latencyMs": 7276,
+      "items": [
+        {
+          "name": "Lean beef steak",
+          "grams": 120,
+          "gramsLow": 84,
+          "gramsHigh": 156
+        },
+        {
+          "name": "cauliflower",
+          "grams": 100,
+          "gramsLow": 70,
+          "gramsHigh": 130
+        },
+        {
+          "name": "Chicken breast, cooked",
+          "grams": 80,
+          "gramsLow": 56,
+          "gramsHigh": 104
+        }
+      ]
+    },
+    {
+      "id": "nutrition5k-1558459115",
+      "name": "Fruit, rice & almonds",
+      "truth": {
+        "mass": 298,
+        "calories": 271.5,
+        "protein": 6.6,
+        "carbs": 43.5,
+        "fat": 10.5
+      },
+      "predicted": {
+        "mass": 440,
+        "calories": 429,
+        "protein": 10.300000000000002,
+        "carbs": 68.4,
+        "fat": 15.999999999999998
+      },
+      "errors": {
+        "mass": 142,
+        "calories": 157.5,
+        "protein": 3.700000000000003,
+        "carbs": 24.900000000000006,
+        "fat": 5.499999999999998
+      },
+      "calorieRange": {
+        "low": 300,
+        "high": 558
+      },
+      "calorieCovered": false,
+      "confidence": 0.64,
+      "measurement": {
+        "plateDiameterCm": 25,
+        "plateProfile": "round-flat",
+        "plateVisible": true,
+        "wholePlateVisible": true,
+        "plateUsedAsScale": false,
+        "viewAngleDeg": 0,
+        "scaleConfidence": "low",
+        "captureQuality": "good",
+        "explanation": "The user specified that the plate is not their usual 25cm plate and its dimensions are unknown, so no scale was applied. Estimates are based on typical sizes for these food items."
+      },
+      "costUsd": 0.0020905,
+      "latencyMs": 8757,
+      "items": [
+        {
+          "name": "Apple",
+          "grams": 180,
+          "gramsLow": 126,
+          "gramsHigh": 234
+        },
+        {
+          "name": "White rice, cooked",
+          "grams": 80,
+          "gramsLow": 56,
+          "gramsHigh": 104
+        },
+        {
+          "name": "Almonds",
+          "grams": 30,
+          "gramsLow": 21,
+          "gramsHigh": 39
+        },
+        {
+          "name": "red grapes",
+          "grams": 60,
+          "gramsLow": 42,
+          "gramsHigh": 78
+        },
+        {
+          "name": "Tomato",
+          "grams": 90,
+          "gramsLow": 63,
+          "gramsHigh": 117
+        }
+      ]
+    },
+    {
+      "id": "nutrition5k-1558546663",
+      "name": "Apple, spinach & almonds",
+      "truth": {
+        "mass": 197,
+        "calories": 330.7,
+        "protein": 10.6,
+        "carbs": 30.3,
+        "fat": 22.1
+      },
+      "predicted": {
+        "mass": 230,
+        "calories": 273,
+        "protein": 7.5,
+        "carbs": 32,
+        "fat": 15.5
+      },
+      "errors": {
+        "mass": 33,
+        "calories": 57.69999999999999,
+        "protein": 3.0999999999999996,
+        "carbs": 1.6999999999999993,
+        "fat": 6.600000000000001
+      },
+      "calorieRange": {
+        "low": 190,
+        "high": 356
+      },
+      "calorieCovered": true,
+      "confidence": 0.64,
+      "measurement": {
+        "plateDiameterCm": 25,
+        "plateProfile": "round-flat",
+        "plateVisible": true,
+        "wholePlateVisible": true,
+        "plateUsedAsScale": false,
+        "viewAngleDeg": 0,
+        "scaleConfidence": "low",
+        "captureQuality": "good",
+        "explanation": "The user specified that the plate is not their usual 25cm plate and its size is unknown, so no scale was applied. Estimates are based on typical sizes for a medium apple and a standard handful of almonds."
+      },
+      "costUsd": 0.0016795,
+      "latencyMs": 7066,
+      "items": [
+        {
+          "name": "Apple",
+          "grams": 180,
+          "gramsLow": 126,
+          "gramsHigh": 234
+        },
+        {
+          "name": "Almonds",
+          "grams": 30,
+          "gramsLow": 21,
+          "gramsHigh": 39
+        },
+        {
+          "name": "spinach",
+          "grams": 20,
+          "gramsLow": 10,
+          "gramsHigh": 30
+        }
+      ]
+    }
+  ]
+}

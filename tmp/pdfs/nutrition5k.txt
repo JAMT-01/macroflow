@@ -1,0 +1,710 @@
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+         Nutrition5k: Towards Automatic Nutritional Understanding of Generic Food   
+                                                                                    
+                                                                                    
+           QuinThames   ArjunKarpur  WadeNorris∗  FangtingXia  LiviuPanait          
+                             TobiasWeyand      JackSim                              
+                                                                                    
+                                 GoogleResearch,USA                                 
+                                                                                    
+                   {quinbob,arjunkarpur,sukixia,liviu,weyand,jacksim}@google.com    
+                                    PerceptionLabs∗                                 
+                                wnorris@perceptionlabs.ai                           
+                                                                                    
+                                                                                    
+                    Abstract                                                        
+                                                                                    
+         Understanding the nutritional content of food from vi-                     
+       sual data is a challenging computer vision problem, with                     
+       the potential to have a positive and widespread impact on                    
+       public health. Studies in this area are limited to existing                  
+       datasets in the field that lack sufficient diversity or labels               
+       required for training models with nutritional understand-                    
+       ing capability. We introduce Nutrition5k, a novel dataset                    
+       of 5k diverse, real world food dishes with corresponding                     
+       videostreams,depthimages,componentweights,andhigh                            
+       accuracy nutritional content annotation. We demonstrate                      
+       the potential of this dataset by training a computer vision                  
+       algorithm capable of predicting the caloric and macronu-                     
+       trient values of a complex, real world dish at an ac-                        
+       curacy that outperforms professional nutritionists. Fur-                     
+       ther we present a baseline for incorporating depth sensor                    
+       data to improve nutrition predictions. We release Nutri-                     
+       tion5k in the hope that it will accelerate innovation in the                 
+       space of nutritional understanding. The dataset is avail-                    
+       able at https://github.com/google-research-                                  
+       datasets/Nutrition5k.                                                        
+       1.Introduction                                                               
+                                           Figure 1. Example representation of data contained in Nutri-
+                                           tion5k.                                  
+         Thenutritionalcompositionofaperson’sdietisinextri-                         
+       cablylinkedtohealth,happiness,andlongevity. Makingit                         
+       easiertounderstandandtrackthenutritionalbreakdownof                          
+       the food we eat enables us to make better dietary choices of apps enable a user to set intake goals for total calories,
+       and potentially live longer and healthier lives. Despite the as well as for specific macronutrients (carbohydrate, pro-
+       considerableimpactthatwhatweeathasonus,thetoolsfor tein,andfat),andprovideaninterfacetologandaggregate
+       trying to understand food are extremely cumbersome and mealstoseeifthesegoalsaremet. Whendoingthistypeof
+       limited.                            tracking,eachingredientordishconsumedmustbeindivid-
+         Currently, the main approach for an individual who ually logged along with the exact portion size. These logs
+       wantstorecordthenutritionalcontentoftheirfoodintakeis can then be automatically converted to nutritional content
+       toutilizeatrackingappsuchasMyFitnessPal. Thesetypes usingaverageperportionvaluessavedinadatabase. Many
+                                           appsrequireascaletoindividuallyweighandlogeachin-
+        ∗WorkdonewhileWadeNorriswasatGoogle. gredient the user eats, but this can be a tedious and time
+                                         8903                                       
+
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+       consumingprocess.Shortofusingascale,userscanalsoat- theingredientbreakdownisloggedviatheitemrecipe,en-
+       tempttoperformvisualportionsizeestimationthemselves, abling the calculation of near exact nutrition annotations.
+       butthiscanbehighlyerror-pronestep [10,18].MyFitness- The end result is Nutrition5k, a dataset of five thousand
+       Palboastedover19Mmonthlyuniqueactiveusersinearly unique,realworld,genericfooddishesandtheirassociated
+       2018[20]despitethesedifficultiesindataentry. Theability videocaptures,depthimages,componentweights,andhigh
+       to streamline food logging with a camera would not only accuracynutritionalinformation. Wedemonstratetheutil-
+       makethisprocesseasierforcurrentactiveusers,butitmay ity of this dataset by training deep CNNs to predict nutri-
+       alsounlockanotherlargedemographicofpotentialusers. tionalcontentfromasingleRGBimage,achievinganaccu-
+         Astheimpactofnutritiononourhealthgrowsmoreap- racythatevensurpassesatrainednutritionist’sabilitytodo
+       parent, more progress has been made in making this data sovisually. Additionally,wemakeuseofdepthsensordata
+       moreaccessible.Manychainrestaurantsnowpostthenutri- as an additional signal to greatly improve our portion size
+       tionalcontentofmenuitemsonlineandinstores. Avariety predictionsandnutritionregressionaccuracy.
+       ofpromisingtechniqueshaveleveragedthispubliclyavail-                         
+                                           2.RelatedWork                            
+       able source of data to show the potential for classification                 
+       modelstohelpwithfoodlogging.Suchapproachesdemon-                             
+                                            Manypriorworks[3,13,15,19]followtheapproachof
+       strateadramaticreductionineffortwhenloggingmealsby                           
+                                           classifying a dish into one of a known set of menu items,
+       enablingausertotakeaphotooftheirdishratherthanman-                           
+                                           whereeachinstanceofanitemisassumedtohaveapprox-
+       ually entering nutritional content. However, this requires                   
+                                           imatelythesamenutritionalbreakdown. Suchanapproach
+       thatthedishbelongtoasetofknownmenuitemswithpre-                              
+                                           isscalabletosomeextent(asmanyas2,500uniquedishes
+       sumably fixed portion sizes and nutritional content. Fre-                    
+                                           areclassifiedin[15]),butislimitedtoclassifyinganentire
+       quently,though,ourmealsarenotonalistofknowndishes                            
+                                           dish image as a single food item. Bolanos et al. [3] ex-
+       andcurrentcapabilitiesinthisspaceareextremelylimited.                        
+                                           tended this to support images with multiple dishes present
+         Weusethetermgenericfoodfordishesthatarenotnec-                             
+                                           at once by using a two stage system that first detects indi-
+       essarily from a pre-determined set with known nutritional                    
+                                           vidualdishes,andthenclassifiesthoseregions.
+       content.Understandingthecontentofgenericfoodrequires                         
+                                            Another set of techniques utilize the abundance of web
+       theabilitytoestimateportionsizesinadditiontorecogniz-                        
+                                           dataforrecipestohelpunderstandimagesofdishes[4,14,
+       ing the ingredients present, making it a significantly more                  
+                                           17,16]. Theseapproachesleverageweblabelstotrainem-
+       difficultproblemthanclassificationalone.                                     
+                                           bedding models that retrieve similar recipes, or use the at-
+         One of the largest challenges to furthering progress in tributelabelsforclassification. However,theymakenoat-
+       this space is data collection. For many computer vision temptatportionestimationandthereforeaimtopredictrela-
+       problems,researchersareabletoleveragetheabundanceof tivenutritionalinformationbutcannotcomputetheabsolute
+       data readily available on the internet to train their models. nutritionalcontentfromthegivendishimage.
+       Unfortunatelyforthenutritionalunderstandingspace,data Approaches such as [6, 7] explicitly tackle the portion
+       ontheinternetissparseandofteninaccurate. Imagesfrom estimationproblembyfittinggeometricshapestodetected
+       many sources are often plated and shot with an artistic in- food items in order to predict volume. These approaches
+       tentiontoincreaseappealratherthanrepresentrealism.The provide accurate results but focus on datasets with limited
+       fewlargescaleanddiversedatasets,suchasRecipe1M[12], variation. Other works employ progress in dense labeling
+       areminedfromrecipewebsites. Whilethesecontainvalu- techniquestoperformportionannotationviasegmentation.
+       able dish level, ingredient level, and preparation attribute Myers et al. [15] combine a segmentation network with a
+       annotations, they almost always lack annotations for the depth prediction network and convert voxels to food vol-
+       portionsizesshowninthephotos. Withoutaccurateportion ume estimates, but their evaluation of this method is lim-
+       size annotations, learning to predict the nutritional content ited to plastic food replicas used for training nutritionists.
+       from the associated images is difficult and error prone. A Cioccaetal. [5]introduceadatasetwith1,027trayimages
+       potential solution for building a nutrition dataset could be andsegmentationmasksfor73foodcategoriesbutwithno
+       to send web-mined images to human annotators and have portionannotations.    
+       themestimatetheportionsize. However,ourfindingsshow The authors of [15] claim that once food volume has
+       thatthisannotationtaskisextremelydifficult,evenfornu- been retrieved, nutritional density datasets can be used to
+       tritionexperts,andproduceshighlyinaccuratelabels. calculatemass,calorie,andmacronutrients. Andoetal.[1]
+         This paper explores an alternative approach to dataset buildon[15]byusinganon-devicesmartphonedepthsen-
+       construction: incrementally weighing, scanning, and log- sortoestimatevolumefromoverheadimageryandlearning
+       gingeachitemasit’saddedtoaplateinrealworldcafete- fooditemdensitytopredictmass,butareultimatelylimited
+       riasimmediatelybeforeconsumption. A varietyofweight in their food density data and only show successful exper-
+       andimagerysensorsareusedforthescanningprocessand iments for three food items. Similarly, Gao et al. [8] use
+                                         8904                                       
+
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+        Name        Unique Mixed Depth Public Non-goals The intent of this dataset is to focus on the
+        MenuMatch[2] 41    Y    N    Y     morechallenginggenericfoodspace,andnottoreplaceap-
+        ECUSTFD[11]  160   N    N    Y     proacheswhereadishcanbeclassifiedintoasetofknown
+        Fangetal.[6] 3     Y    N    N     menu items with known portion sizes, as is done in some
+        Andoetal.[1] 3     Y    Y    Y     of the aforementioned related works [3, 13, 15, 19]. Re-
+        Nutrition5k[Ours] 5,066 Y Y  Y     trieval and classification style approaches, when possible,
+                                           will inherently produce higher accuracy results than those
+       Table1.Summary ofnutritiondatasets(i.e. containportionand intendedforgenericfood,andassuchweseethechallenges
+       calorie annotations). Here we define unique as the number of asdistinct.     
+       dishes with a unique combination of ingredients so that it has a             
+       differentunderlyingnutritionalbreakdown(e.g. differentingredi-               
+       ents or different portion sizes thereof). Mixed refers to multiple           
+       ingredientsperdish.                                                          
+       on-devicesensorstoestimatefoodvolumebutmakenoat-                             
+       temptstodeterminefooddensity/mass.                                           
+         Liangetal. [11]presentadatasetwith2,978imagesof                            
+       160uniquepiecesoffoodanduseaFasterRCNNnetwork                                
+       topredictthemass. Thesearemostlywholefoodssuchas                             
+       anentireappleortomato,oneperplate. Manyoftheseap-                            
+       proachesalsoutilizeafudicialmarkerforscale;forexample                        
+       [11]usesaYuancoinand[6]usesacheckeredsquare.                                 
+       3.Dataset                                                                    
+       3.1.Goals                                                                    
+                                                                                    
+         Nutrition5k is intended to be a diverse dataset of food                    
+       dishes with in-depth, high accuracy annotations, and scale                   
+       sufficient to train a high capacity neural network. The                      
+       hope is that this will spur innovative research into new                     
+       approaches to automatic nutritional understanding in the                     
+                                              Figure2. RGBimageexamplesfromNutrition5k.
+       genericfoodspaceandprovideabenchmarkforfutureeval-                           
+       uation. The following were important motivations when                        
+       collectingthedataset:                                                        
+        • DiversityForanapproachtogeneralizetotheculinary                           
+          diversity seen in the real world, the training dataset                    
+          mustcoverawidevarietyofingredients,portionsizes,                          
+          anddishcomplexities.                                                      
+        • RealisticBycapturingphotographsofrealfood,inac-                           
+          tual campus cafeterias, the data simulates real world                     
+          conditionswhereloggingmealswouldoccur. Figure3. DepthimageexamplesfromNutrition5k.
+        • ChallengingAsinrealworlddishes,imagesinNutri-                             
+          tion5kcontainambiguitiesandchallengesthatmaynot 3.2.ScaleandSplits        
+          bepossibletofullyovercome(e.g. ingredientsmaybe                           
+          partiallyorfullyoccludedbyothers). Nutrition5k contains 20k short videos generated from
+                                           roughly 5000 unique dishes constructed from more than
+        • HighaccuracyTosurpasshumanabilityinvisualnu- 250 different ingredients. Each dish has a full breakdown
+          trition estimation, it is important to gather data that of ingredient labels, their quantities, and their macronutri-
+          gives a more accurate understanding of the contents ent information computed using the USDA Food and Nu-
+          ofaplate(i.e. depthimagesandcomponentweighing) trientDatabase[9]. Furthermore,3.5koutofthe5kdishes
+          thanvisualestimationalone.       alsoincludeoverheadRGB-DimagescapturedfromanIn-
+                                                                                    
+                                                                                    
+                                         8905                                       
+                                                                                    
+
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                 Mean Standard AverageDeviation ure5).Roboticautomationwasusedtomanipulateandtrig-
+                      Deviation fromMean   gerallofthesensorssimultaneouslytoreducethetimere-
+        Calorie   255   220      136       quiredforeachscan.                       
+        TotalMass(g) 215 161     114        In curating complex dishes with accurate nutrition la-
+        Fat(g)   12.7  13.5      6.93      bels, itemsfromthebuffetstylecafeteriaswereaddedone
+        Carbs(g) 19.4  21.6      10.3      at a time to a plate or bowl, followed by a scan after each
+        Protein(g) 18.0 20.0     10.7      itemwasadded. Anitemcorrespondstoeitheranindivid-
+                                           ualingredientorapreparedfoodwithaknownrecipe,and
+       Table 2. Mean, standard deviation, and average deviation from thusknownpergramingredientbreakdowns. Pergramnu-
+       meanforeachmetricinNutrition5k.                                              
+                                           trition content for each item was calculated using the per
+                                           gram ingredient breakdown and the USDA Food and Nu-
+       telRealSensecamera. Asfarasweareaware,Nutrition5k trientDatabase. Thisvalueisthenmultipliedbytheincre-
+       isthelargestnutritiondatasetwithportionannotations. mentalweightmeasurementastheitemisaddedtotheplate
+         Thedataisdividedintotrainingandtestingsubsets. We to generate the ground truth annotation for nutrition con-
+       partition 10% of the dishes into the test set, and leave the tent. Asitemswereadded,dishesgrewfromsimple,single
+       remainderastrain. WecallthesecorrespondingsetsNutri- recipeplatestomuchmorecomplexandchallengingmixed
+       TrainandNutri-Test.                 recipedishes. However,evenasingleitemdishcouldbea
+                                           quitecomplexrecipemenuitem.              
+       3.3.DataDistribution                                                         
+                                            Notethatthedatasplitsrespecttheincrementalnatureof
+         The dishes in Nutrition5k vary drastically in portion scans,suchthatalldishesbelongingtoasingleincremental
+       sizes and dish complexity, with dishes ranging from just scan will exist in either Nutri-Train or Nutri-Test. In this
+       a few calories to over 1000 calories and from a single in- way, we ensure that the test and training sets do not have
+       gredienttoupto35withanaverageof5.7ingredientsper anyoverlappingimagesofthesameplate.
+       plate. Table 2 shows the variety in nutritional breakdown For each scan, the following data was recorded: the
+       of the dishes used. Figure 4 shows the 30 most common recipe or ingredient of the item added, four RGB video
+       ingredientsinNutrition5kbymass. Sortingingredientsby recordings, an overhead RGB-D image, and an incremen-
+       massinsteadoffrequencygivesamoreintuitivelookatthe tal weight measurement. The five cameras are oriented
+       commoningredientsused,asthemostfrequentlyoccurring above and around the plate, with one pointing down from
+       ingredients are basics such as salt, pepper, olive oil, and directlyoverheadandtheremainingfourfromeachsideof
+       vinegar.                            the dishes. The four side-angle cameras all sweep 90 de-
+                                           grees simultaneously, capturing the full 360 degrees, and
+       3.4.SupervisionLabels                                                        
+                                           are alternated at approximately 30 degrees and 60 degrees
+         Our Nutrition5k dataset can be represented as D = downfromthehorizon.Eachcamerarecordsin1920×1080
+       {I i ,Y i }N i=1 , inwhichI i istheimage, Y i isthesupervision resolutionforapproximately8secondspersweep, andthe
+       labels, andN isthenumberofexamples. Thesupervision depthimageisgeneratedbyaveragingoverthe8secondpe-
+       labels Y i = (y i w,Y i m,y i cal) consist of three types: total riodtoremovenoiseandholesfromthecapture. Weusean
+       weight label yw, macronutrient labels Ym, and a calorie Intel RealSense D435 to collect overhead depth data, with
+               i              i                                                     
+       labelycal. Notethatallofthesupervisionlabelsareafunc- depthunitsof1e−4.Adigitalscaleundertheplatecaptures
+           i                                                                        
+       tionoftheweight(ingrams)ofeachingredientK l wherel theincrementalweightwithin+/-1gramofprecision.
+       isanindexrunningoverallingredientsasfollows:                                 
+                                           3.6.Challenges                           
+        • yw representsthetotalweightofeachdish.                                    
+          i                                                                         
+                                            While this dataset strives to achieve a high fidelity un-
+        • Ym is a vector of the weights of each macronutrient,                      
+          i                                derstandingofthenutritionalcontentofdishescapturedvia
+          i.e. Let M = {carb,fat,protein}, then ∀j ∈ M,                             
+                                           per item mass and volume measurements, there are ways
+          ym = F  (K ,j)whereF isafunctionthat                                      
+          ij  macro l      macro           in which potential error could still accumulate. For ex-
+          calculatestheamountofeachmacronutrient.                                   
+                                           ample,pickingoutandremovingspecificingredientsfrom
+        • ycal = F (K ) where F is a function an established recipe could skew the nutrition content log,
+          i     calorie l   calorie                                                 
+          whichcalculatesthetotalnumberofcaloriesfromper thoughsuchbehaviorwasdiscouraged.
+          ingredientweights.                The complexity of collecting in depth annotations with
+                                           specialized hardware limited our collection efforts for this
+       3.5.CollectionProcedure                                                      
+                                           datasettoasinglerealworldcafeteria. Whilethecafeteria
+         To capture and record data, we utilize a custom sensor hadadiverseanddailyupdatingsetofmenuitemsfromvar-
+       arraytoweighandscaneachdishinNutrition5k(seeFig- ious cultural cuisines, the limited geographic nature of the
+                                         8906                                       
+
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                         .          
+                            Figure4. Top30ingredientsbymassinNutrition5k.           
+                                                                                    
+                                                                                    
+                                           Wethencompareourperformanceinportionestimationto
+                                           estimatesmadebybothexpert(nutritionists)andnovicean-
+                                           notatorsonasubsetofthedata.              
+                                           4.1.Metrics                              
+                                                                                    
+                                            Given the unique portion annotations and depth data
+                                           available in Nutrition5k, we conduct 3 novel experiments.
+                                           First, we train a portion independent regression model
+                                           wherecaloriesandmacronutrientspergramoffoodarepre-
+                                           dictedfromasingleRGBimage. Next,wepredictthepre-
+                                           cise nutritional content of a dish, portion (i.e. mass) in-
+                                           cluded,fromasingleRGBimage. Finally,weaugmentthe
+                                           RGB input to this direct prediction with depth data in an
+                                           attempttoimproveuponour2Dbaseline. Wemeasurethe
+           Figure5. Roboticdeviceforrapiddatacapture. regression accuracy of calorie, total mass, and individual
+                                           macronutrient mass using the mean absolute error (MAE),
+                                           whichisdefinedas:                        
+       collectioninherentlyskewsthefoodseentomostlywestern                          
+       styledishes. Weleaveaddingscansfrommoregeographi-                            
+                                                            N                       
+                                                          1                         
+       callyandculturallydiversecafesforfuturework. MAE =                           
+                                                         N                          
+                                                           X|yˆ                     
+                                                              i                     
+                                                               −y                   
+                                                                 i                  
+                                                                  |       (1)       
+         Therearealsosomepotentialbiasesintroducedbylever- i=1                      
+       aging robotic automation for efficient data collection. The                  
+                                           where yˆ is the predicted value for a given test image I
+       relativelysmallsetofviewingdistancesandthesensorsup- i              i        
+                                           for each metric. Caloric values are measured in standard
+       port structures seen in the background could potentially                     
+                                           kilocaloriesunits,whilemacronutrientandtotalmassesare
+       be used by an algorithm to assist in portion size estima-                    
+                                           measuredingrams.WepresenttheMAEasadirectvaluein
+       tion. Our experiments show, however, that providing ex-                      
+                                           itsrespectiveunitsandasapercentageofthemeanground
+       plicit depth information to models still proves to be a sig-                 
+                                           truthvalue.                              
+       nificantfactorinportionestimation.                                           
+                                           4.2.ExperimentalSetup                    
+       4.Experiments                                                                
+                                           Base architecture Our architecture is based on an Incep-
+         Thissectiondetailsourexperimentsindevelopingcom- tionV2[22]backboneencoder. Theinputresolutiontothe
+       putervisionmodelsbasedondatacollectedinNutrition5k. networkisa256x256image,whereimagesweredownsized
+       WesampleRGBframesanddepthimagesfromthedataset, and center cropped in order to retain the most salient dish
+       andtrainmodelstopredictthenutritionalcontentofadish. region. We optimize our network using the RMSProp al-
+       We present metrics to assess model performance based on gorithm, with an initial learning rate of 1e−4, momentum
+       predictionmethod, modelarchitecture, andthesubsequent of 0.9, decay of 0.9, and epsilon of 1.0. All models are
+       impact each had on end-to-end nutritional understanding. pretrainedusingJFT-300M[21].
+                                         8907                                       
+
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                    Figure6. Overviewofnetworkarchitectureforourmulti-tasklearningexperiments.
+                                                                                    
+                                                                                    
+       Multi-task learning For each regression task (calorie, sub-taskswhileym, ycal, andyw aretheground-truthval-
+                                                    j                               
+       macronutrients, and optionally mass), we train a separate ues.               
+       multi-task head. The multi-task learning architecture uti- Experiment Data The partitions between Nutri-Train and
+       lizes the mixed5c outputs from the InceptionV2 base and Nutri-Testremainconstantforallexperiments.For2Donly
+       applies a [3, 3] average pooling kernel with stride 2 and models,therotatingvideosaresampledandevery5thframe
+       validpadding. Two4096-dimensionalfullyconnected(FC) is used for training. For the depth aware models, only the
+       layersfollow,andalltasksshareweightsupuntilthispoint. subsetofdisheswithRealSenseRGB-Dimagesareused.
+       For each regression task, a final third and fourth FC lay-                   
+       ers follows (with dimension 4096 and 1, respectively) and 4.3.NutritionUnderstandingfrom2DImages
+       theappropriatelossforthegiventaskisused,asdefinedin                          
+                                           Portion Independent Model The multi-task learning
+       Equation 2. Figure6 provides an overview of the network                      
+                                           framework was first applied to predicting the caloric con-
+       architecture.                                                                
+                                           tentandmacronutrientbreakdownofadishindependentof
+         We learn the weights W for the multi-task network by                       
+                                           portionsize. Thiswasdonebynormalizingthecaloricand
+       minimizingthelossfunctionl definedas:                                        
+                       multi                                                        
+                                           macronutrientvaluesbythemassoftheoveralldish,which
+                      1 N                  convertsunitstocaloriespergram,carbohydratespergram,
+              l                                                                     
+              multi                                                                 
+                 (D|W)=                                                             
+                      N                                                             
+                       X[l m(I                                                      
+                            i                                                       
+                            ,Y                                                      
+                              i                                                     
+                              m|W)                                                  
+                                           fat per gram and protein per gram. In order to compare
+                        i=1                                                         
+                                           thesepredictionstoourothermodelsinTable3,wemulti-
+                      +l c(I                                                        
+                         i                                                          
+                          ,y                                                        
+                           i                                                        
+                           cal|W)                                                   
+                                           ply these predictions by the ground truth mass to generate
+                      +l w(I                                                        
+                          i                                                         
+                          ,y                                                        
+                           i                                                        
+                           w|W)]                                                    
+                                           caloricandmacronutrientvaluesinstandardunits(kilocalo-
+             l m(I,Ym|W)=                                                           
+                      |M                                                            
+                       1                                                            
+                        |                                                           
+                         X|yˆ                                                       
+                            j                                                       
+                            m−y                                                     
+                               j                                                    
+                               m|          riesandgrams,respectively).              
+                        j∈M                 This network achieves an MAE of 9.5% when predict-
+             l c(I,ycal|W)=|yˆcal−ycal|    ingcaloriespergramandanaverageMAEof14.7%when
+                                           predictingmacronutrientspergram.         
+              l w(I,yw|W)=|yˆw−yw|                                                  
+                                           Direct Prediction While the portion independent model
+                                      (2)                                           
+                                           provides insight into the nutritional breakdown of a meal,
+       Theoveralllossl isaweightedcombinationofthree a much more valuable use case is to predict the absolute
+                 multi                                                              
+       sub-task loss functions: macronutrient regression loss l , values of calories and macronutrients of the dish. We ap-
+                                      m                                             
+       calorie regression loss l , and total weight loss l . l , l , ply the same architecture and multitask learning methods
+                    c             w m  c                                            
+       andl usemeanabsoluteerror(MAE)astheregressionloss. to directly regress these absolute values, as well as total
+          c                                                                         
+       yˆm,yˆcal,andyˆw arethepredictedlabelvaluesforthethree mass. This model is able to predict calories with an MAE
+        j                                                                           
+                                         8908                                       
+
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                             CalorieMAE MassMAE FatMAE   CarbMAE ProteinMAE         
+          Baseline           150.8/60.2% 124.6/58.5% 8.2/67.6% 12.5/62.1% 10.5/62.1%
+          2DPortionIndependentModel 24.1/9.5% - 2.3/18.3% 2.7/13.9% 2.2/12.0%       
+          2DDirectPrediction 70.6/26.1% 40.4/18.8% 5.0/34.2% 6.1/31.9% 5.5/29.5%    
+          Depthas4thChannel  47.6/18.8% 40.7/18.9% 2.27/18.1% 4.6/23.8% 3.7/20.9%   
+          VolumeScalar       41.3/16.5% 29.4/13.7% 3.0/25.5% 4.5/22.0% 5.2/31.1%    
+       Table3.Meanabsoluteerror(MAE)andmeanabsoluteerrorasapercentoftherespectivemeanforthatfield.Evaluationsarerunontest
+       set. CaloricMAEismeasuredincalories,allothersaremeasuredingrams. Baselineistheerrorforanapproachthatalwayspredictsthe
+       meanvalueforeachfield.                                                       
+                                                                                    
+       of 26.1% and macronutrients with an aggregate MAE of TotalMassMAE            
+       31.9%.                                    Image-only 38.1g/29.5%             
+                                                 Image+volume 29.4g/13.7%           
+       4.4.DepthandVolumeforPortionEstimation Table 4. Mean absolute error for mass regression from an RGB
+                                           (andoptionallyvolumeestimate)input.      
+       RGB-DInputInanattempttoimproveuponthedirectpre-                              
+       diction of calories and macronutrients, we also explored                     
+       ways to incorporated the depth images from Nutrition5k fullyconnectedlayers.Similartothepreviousexperiments,
+       into the training and regression process. First, we naively wereportaccuracyformassestimationintermsofabsolute
+       augmented the input image with depth as a 4th channel, andrelativeMAE.Despitevolumebeingaderivedestimate
+       which is sampled to a 3 channel tensor and input into fromtherawdepthdata,Table4showsthatthevolumees-
+       the model. Using this RGB-D input for direct prediction timatepriorsignificantlyimprovesperformanceinmasses-
+       methodyielded acalorieMAEof 18.8%andan aggregate timation.                   
+       macronutrientMAE 20.9%,asshowninTable3. Finally, we combine the predictions from our Im-
+       RGB with Volume Estimate Input Additionally, we ex- age+volume mass estimation with the separate portion in-
+       perimented with factoring the end-to-end nutrition under- dependentper-grammodelpredictionstoshowacomplete,
+       standing problem into two disjoint challenges: portion in- end to end direct nutrition prediction with a calorie MAE
+       dependent regression and portion estimation. We use our of 16.5% and aggregate macronutrient MAE of 26.2%, as
+       highly effective portion independent model from Table 3 showninTable3.       
+       for the former, and train an independent mass regression                     
+                                           4.5.Analysis                             
+       network for the latter. To bolster our mass regression net-                  
+       work, we explicitly calculate an estimate for food volume Table3showsthedisparityinaccuracybetweenportion
+       fromthedepthimage,leveragingthisasapriorinputtothe independentpredictionanddirectnutritionprediction. Pre-
+       portionestimationmodel.             dicting direct calories compared to calories per gram in-
+         We follow after [1] to generate food volume estimates creases the MAE nearly 3x from 9.5% to 26.1%. This
+       from overhead depth images. Given the distance between demonstrates the substantial increase in complexity of the
+       cameraandcaptureplane(35.9cm),andtheper-pixelsur- challengewhenportionestimationisrequired. Whilethese
+       faceareaatthisdistance(5.957×10 −3cm2),wecalculate portion independent models can be accurate, they still re-
+       the per-pixel volume measurement and sum over all food quiretheusertomeasureorweighouttheirmealsinorder
+       pixels(usingabinaryforeground/backgroundfoodsegmen- tokeepanaccuratenutritiondiaryandthereforeofferslim-
+       tation model) to determine the final food volume estimate. ited benefits over existing online nutrition trackers such as
+       Thisvolumeestimationmethodisperformedforeachdish MyFitnessPal. In our depth and volume experiments, we
+       intheNutrition5kcollectionusingtheoverheadRealSense showhowtheuniquelargescaledepthdataofferedinNu-
+       RGBanddepthimages. WethentrainanInceptionV3[22] trition5k can be used to approach this problem. Our first
+       network(followedbytwofullyconnectedlayersof64and attemptofintegratingdepthinformationalreadyshowssig-
+       1dimension)tolearnmassregressiondirectlyfromthein- nificant improvements on our baseline 2D direct nutrition
+       putoverheadRGBimage,volumeestimation,andper-dish model.However,usingthedepthmaptocalculateavolume
+       foodmassannotations.                scalar,whichisprovidedasaseparateinputtodirectmass
+         In the baseline variant (Image-only), only the image is regression, brings the error down from 18.7% to 13.7%.
+       used as input during training and evaluation. We evalu- And combining this volume-assisted mass prediction net-
+       ate the impact of adding volume as an additional signal workwithourmostaccuratenutritionmodelofcaloriesper
+       by concatenating the volume estimation value to the out- gramgivesusanend-to-endcaloriepredictionpipelinewith
+       putoftheInceptionV3backbone,beforethefollowingtwo an MAE or 16.5%. To our knowledge, no other research
+                                         8909                                       
+
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+       has produced similar accuracy in regressing nutrition val-                   
+       ues from images and depth in the generic food space. We                      
+       hypothesize that this is due to the lack of a sufficiently di-               
+       verseandaccuratelyannotateddatasettofacilitatesuchan                         
+       approachpriortoNutrition5k.                                                  
+       4.6.HumanPerformance                                                         
+         In many computer vision datasets, images are first col-                    
+       lected at scale and then annotated after the fact by human                   
+       raters, who are able to accomplish their annotation task                     
+       given the context in the image. However, this methodol-                      
+       ogy is insufficient for nutrition datasets. To evaluate the                  
+       necessityofmanuallyweighingfooditemsatcapturetime,                           
+       aswasdoneinNutrition5k,weestablishabaselineformass                           
+       estimationbypeoplevisuallyestimatingportionsizes. We                         
+       followthecurrentbehaviorofmanynutritiontrackingapp                           
+       userswhenloggingconsumption,asdescribedinSection1.                           
+       For comparison, we show the resulting mass prediction of                     
+       humanportionestimationversusourmodel’spredictions.                           
+         10 images were sampled from Nutri-Test, 6 with                             
+       one ingredient per plate (in order: chicken, broccoli,                       
+       cucumber, bell pepper, cantaloupe, pineapple) and 4                          
+       with three different ingredients per each plate (in or-                      
+       der: oatmeal/lemon/berries, asparagus/olives/pineapple,                      
+       sausage/olives/ham, and broccoli/tofu/ham). These com-                       
+       plexity of these dishes err on the side of simplicity com-                   
+       pared to the average dish in Nutrition5k in order to pro-                    
+       videthehumanratersabetterchanceatestimatingportions.                         
+       These images were displayed to two groups: 16 amateurs                       
+       (non-nutritionists) and 4 professionals (nutritionists). We                  
+       askedthemtoestimatethemass1ofeachingredientpresent                           
+       on the plate and subsequently converted these values into                    
+       nutritionestimatesusingthesameUSDA[9]valuesweused                            
+       to create our dataset. Reference points were also provided                   
+       to help with estimations; for example, survey instructions                   
+       indicatedthataUSquarterandanaveragecellphoneweigh                            
+       5.6and113grams,respectively.                                                 
+         We then computed both the absolute error of each in-                       
+       dividual’s total dish mass estimate utilizing known ground                   
+       truth values and the mean per dish error across the two                      
+       groups (non-nutritionist vs nutritionist). Figure 7 com-                     
+       pares mass estimation performance between human error                        
+       collected from estimation surveys with the results of our                    
+       2D only direct prediction. The graph reports percent error                   
+       oftotalmasstoperformarelativecomparison.                                     
+         The average percent error for non-nutritionists is 53%,                    
+       which is consistent with previous reports of high human                      
+       inaccuracywhenperformingvisualportionsizeestimation                          
+       [10,18]. Thenutritionistshadaloweraveragepercenterror                        
+       rateof41%.Whilethissurveyisnotanexhaustivestudyon                            
+        1Weadditionallysurveyedathirdgroupof32non-nutritionistsforvol-              
+       umeestimates,buttheirassessmentswereslightlylessaccuratethanthe              
+       massbasedsurvey.                                                             
+                                              ,1etalP slac                          
+                                               98                                   
+                                                 ,2etalP slac                       
+                                                  81                                
+                                                   ,3etalP slac                     
+                                                    8                               
+                                                      ,4etalP slac                  
+                                                       12                           
+                                                         ,5etalP slac               
+                                                         22                         
+                                                           ,6etalP slac             
+                                                            84                      
+                                                              ,7etalP slac          
+                                                              821                   
+                                                                ,8etalP slac        
+                                                                 77                 
+                                                                   ,9etalP slac     
+                                                                    533             
+                                                                     ,01etalP slac  
+                                                                      241           
+                                                                        egarevA     
+                                             100                                    
+                                             80                                     
+                                             60                                     
+                                             40                                     
+                                             20                                     
+                                              0                                     
+                                           )seirolac(                               
+                                           rorre                                    
+                                           %                                        
+                                           egarevA                                  
+                                                                  Non-nutritionists 
+                                                                  Nutritionists     
+                                                                  Model             
+                                           Figure7. MAEofhumanestimatesandMAEofmodelestimates
+                                           asapercentofthetotalcaloriesfortherespectiveplate. TheX-
+                                           axislabelforeachplatealsoincludesitsgroundtruthcaloricvalue.
+                                           theabilityofhumanpredictionperformance,themagnitude
+                                           of the error values this provides evidence that human rater
+                                           portionannotationisnotaviablemethodofdatacollection
+                                           inthenutritionspace.                     
+                                           5.Conclusion                             
+                                            Inthispaper,wepresentNutrition5k,thefirstnutritional
+                                           understandingdatasetofitssize,diversity,anddepthofla-
+                                           beling. We provide evidence of the challenging nature of
+                                           visualannotationinourhumanportionsizeestimationstud-
+                                           ies,demonstratingthelimitationsoftypicaldataannotation
+                                           approaches in this space. We validate the effectiveness of
+                                           ourapproachtodatacollectionandtheresultingNutrition5k
+                                           dataset by training a neural network that can outperform
+                                           professional nutritionists at caloric and macronutrient es-
+                                           timation in the generic food setting. We further introduce
+                                           multiplebaselineapproachesofincorporatingdepthdatato
+                                           significantlyimproveuponourdirectnutritionalprediction
+                                           from2Dimagesalone. Ourhopeisthatthereleaseofthis
+                                           dataset will inspire further innovation in the automatic nu-
+                                           tritional understanding space and provide a benchmark for
+                                           evaluationoffuturetechniques.            
+                                           References                               
+                                           [1] Yoshikazu Ando, Takumi Ege, Jaehyeong Cho, and Keiji
+                                             Yanai. Depthcaloriecam: Amobileapplicationforvolume-
+                                             basedfoodcalorieestimationusingdepthcameras. InPro-
+                                             ceedings of the 5th International Workshop on Multimedia
+                                             AssistedDietaryManagement,pages76–81,2019.
+                                           [2] OscarBeijbom,NeelJoshi,DanMorris,ScottSaponas,and
+                                             Siddharth Khullar. Menu-match: Restaurant-specific food
+                                             logging from images. In 2015 IEEE Winter Conference
+                                         8910                                       
+
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+          onApplicationsofComputerVision,pages844–851.IEEE, George Papandreou, Jonathan Huang, and Kevin Murphy.
+          2015.                              Im2calories: towards an automated mobile vision food di-
+        [3] MarcBolanosandPetiaRadeva. Simultaneousfoodlocal- ary. InICCV,2015.     
+          ization and recognition. In 2016 23rd International Con- [16] RobinRuede,VerenaHeusser,LukasFrank,AlinaRoitberg,
+          ference on Pattern Recognition (ICPR), pages 3140–3145. MonicaHaurilet,andRainerStiefelhagen. Multi-tasklearn-
+          IEEE,2016.                         ingforcaloriepredictiononanovellarge-scalerecipedataset
+        [4] Jingjing Chen and Chong-Wah Ngo. Deep-based ingredi- enrichedwithnutritionalinformation,2020.
+          entrecognitionforcookingreciperetrieval. InProceedings [17] AmaiaSalvador,NicholasHynes,YusufAytar,JavierMarin,
+          of the 24th ACM international conference on Multimedia, FerdaOfli,IngmarWeber,andAntonioTorralba. Learning
+          pages32–41.ACM,2016.               cross-modal embeddings for cooking recipes and food im-
+        [5] GianluigiCiocca, PaoloNapoletano, andRaimondoSchet- ages. InCVPR,2017.  
+          tini. Foodrecognition: anewdataset, experimentsandre- [18] TusaRebecca E Schap, Bethany L Six, Edward J Delp,
+          sults. IEEEJournalofBiomedicalandHealthInformatics, DavidSEbert,DeborahAKerr,andCarolJBoushey. Ado-
+          21(3):588–598,2017.                lescentsintheunitedstatescanidentifyfamiliarfoodsatthe
+        [6] ShaoboFang,ChangLiu,FengqingZhu,EdwardJDelp,and timeofconsumptionandwhenpromptedwithanimage14
+          CarolJBoushey. Single-viewfoodportionestimationbased hpostprandial, butpoorlyestimateportions. Publichealth
+          on geometric models. In 2015 IEEE International Sympo- nutrition,14(7):1184–1191,2011.
+          siumonMultimedia(ISM),pages385–390.IEEE,2015. [19] Ashutosh Singla, Lin Yuan, and Touradj Ebrahimi.
+        [7] Shaobo Fang, Fengqing Zhu, Chufan Jiang, Song Zhang, Food/non-foodimageclassificationandfoodcategorization
+          CarolJBoushey,andEdwardJDelp. Acomparisonoffood using pre-trained googlenet model. In Proceedings of the
+          portion size estimation using geometric models and depth 2ndInternationalWorkshoponMultimediaAssistedDietary
+          images. In 2016 IEEE International Conference on Image Management,pages3–11.ACM,2016.
+          Processing(ICIP),pages26–30.IEEE,2016.                                    
+                                           [20] Statista. Mostpopularhealthandfitnessappsintheunited
+        [8] JunyiGao,WeihaoTan,LiantaoMa,YashaWang,andWen statesasofmay2018,bymonthlyactiveusers(inmillions),
+          Tang. Musefood: Multi-sensor-basedfood volumeestima- 2018.                
+          tiononsmartphones. In2019IEEESmartWorld,Ubiquitous                        
+                                           [21] ChenSun, AbhinavShrivastava, SaurabhSingh, andAbhi-
+          Intelligence&Computing,Advanced&TrustedComputing,                         
+                                             navGupta. Revisitingunreasonableeffectivenessofdatain
+          ScalableComputing&Communications,Cloud&BigData                            
+                                             deeplearningera. InICCV,pages843–852,2017.
+          Computing, Internet of People and Smart City Innovation                   
+                                           [22] Christian Szegedy, Vincent Vanhoucke, Sergey Ioffe, Jon
+          (SmartWorld/SCALCOM/UIC/ATC/CBDCom/IOP/SCI),                              
+                                             Shlens,andZbigniewWojna.Rethinkingtheinceptionarchi-
+          pages899–906.IEEE,2019.                                                   
+                                             tectureforcomputervision.InProceedingsoftheIEEEcon-
+        [9] Food Surveys Research Group et al. Usda food and nutri-                 
+                                             ference on computer vision and pattern recognition, pages
+          entdatabasefordietarystudies,4.1. AgriculturalResearch                    
+                                             2818–2826,2016.                        
+          Service,2010.                                                             
+       [10] Christina D Lee, Junghoon Chae, TusaRebecca E Schap,                    
+          DeborahAKerr,EdwardJDelp,DavidSEbert,andCarolJ                            
+          Boushey. Comparisonofknownfoodweightswithimage-                           
+          based portion-size automated estimation and adolescents’                  
+          self-reported portion size. Journal of diabetes science and               
+          technology,6(2):428–434,2012.                                             
+       [11] YanchaoLiangandJianhuaLi. Computervision-basedfood                      
+          calorie estimation: dataset, method, and experiment. 05                   
+          2017.                                                                     
+       [12] Javier Marin, Aritro Biswas, Ferda Ofli, Nicholas Hynes,                
+          Amaia Salvador, Yusuf Aytar, Ingmar Weber, and Antonio                    
+          Torralba. Recipe1m: A dataset for learning cross-modal                    
+          embeddings for cooking recipes and food images. arXiv                     
+          preprintarXiv:1810.06553,2018.                                            
+       [13] Simon Mezgec and Barbara Korousˇic´ Seljak. Nutrinet: A                 
+          deeplearningfoodanddrinkimagerecognitionsystemfor                         
+          dietaryassessment. Nutrients,9(7):657,2017.                               
+       [14] Weiqing Min, Bing-Kun Bao, Shuhuan Mei, Yaohui Zhu,                     
+          YongRui,andShuqiangJiang. Youarewhatyoueat: Ex-                           
+          ploring rich recipe information for cross-region food anal-               
+          ysis. IEEE Transactions on Multimedia, 20(4):950–964,                     
+          2018.                                                                     
+       [15] AustinMyers,NickJohnston,VivekRathod,AnoopKorat-                        
+          tikara,AlexGorban,NathanSilberman,SergioGuadarrama,                       
+                                         8911                                       

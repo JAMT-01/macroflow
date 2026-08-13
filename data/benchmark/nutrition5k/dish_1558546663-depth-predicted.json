@@ -1,0 +1,13 @@
+{
+  "dishId": "1558546663",
+  "model": "depth-anything/Depth-Anything-V2-Metric-Indoor-Small-hf",
+  "latencySeconds": 0.7036728000002768,
+  "validPixels": 252896,
+  "maeMeters": 0.5237261056900024,
+  "rmseMeters": 0.5318848490715027,
+  "absoluteRelativeError": 1.3887097835540771,
+  "medianScaleCorrection": 0.41498443484306335,
+  "scaleAlignedMaeMeters": 0.019678428769111633,
+  "predictedMedianMeters": 0.8723218441009521,
+  "truthMedianMeters": 0.3619999885559082
+}

@@ -1,0 +1,727 @@
+                  ThisCVPRWorkshoppaperistheOpenAccessversion,providedbytheComputerVisionFoundation.
+                            Exceptforthiswatermark,itisidenticaltotheacceptedversion;
+                         thefinalpublishedversionoftheproceedingsisavailableonIEEEXplore.
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+        Decomposing Food Images for Better Nutrition Analysis: A Nutritionist-Inspired
+                                                                                    
+                          Two-Step Multimodal LLM Approach                          
+                                                                                    
+                                                                                    
+            PitikornKhlaisamniang1,2,† KunKerdthaisong1,2,3,† SupasateVorathammathorn1,2,†
+             NutchanonYongsatianchot3 HirunkulPhimsiri1,4 AmrestChinkamol1,5        
+             TeermadeThitseesaeng6 KanyakornVeerakanjana1,7,8 KaisornKachai1        
+                         PiyalittIttichaiwong1,7,9,* TossapornSaengja1,7,*          
+                                                                                    
+                                1PreceptorAITeam,CARIVAThailand                     
+                               2ArtificialIntelligenceAssociationofThailand         
+                           3ThammasatSchoolofEngineering,ThammasatUniversity        
+        4ComputerEngineeringandDigitalTechnologyDepartmentofComputerEngineering,FacultyofEngineering,ChulalongkornUniversity
+                             5VidyasirimedhiInstituteofScienceandTechnology         
+                                6NationalHealthSecurityOffice(NHSO)                 
+             7SirirajInformaticsandDataInnovationCenter(SIData+),FacultyofMedicine,SirirajHospital,MahidolUniversity
+         8Social,GeneticandDevelopmentalPsychiatryCentre,InstituteofPsychiatry,PsychologyandNeuroscience,King’sCollegeLondon
+                      9SchoolofBiomedicalEngineering&ImagingSciences,King’sCollegeLondon
+                                    †Equalfirstcontributions                        
+                                    *Correspondingauthors                           
+                                                                                    
+                     Abstract               bilityofimage-basedmacronutrientestimation.
+                                                                                    
+                                                                                    
+        Accurate estimation of nutritional information from food                    
+                                            1.Introduction                          
+        images remains a challenging problem. Most existing ap-                     
+        proachesrelyondeepimagemodelsfine-tunedwithexten- Maintaining a consistent, healthy diet has a profound im-
+        sive food annotations or require detailed user inputs (e.g., pact on health outcomes; however, sustaining it remains a
+        portion size, cooking method), both of which are prone to challenge. Having balanced diet promotes health by re-
+        error. Motivated by the workflow of nutrition experts, we ducing the risks of malnutrition and chronic diseases [27].
+        propose a two-step prompting framework leveraging off- However,mostpeoplestruggletoaccuratelyestimatetheir
+        the-shelf Multimodal Large Language Models (MLLMs). daily caloric and macronutrient intake, often due to the
+        The first step deconstructs the dish into its components complexity of measuring portion sizes and identifying all
+        listing major ingredients, portion sizes, and cooking de- ingredientsofameal. Suchmisestimationcanleadtolong-
+        tails while the second step computes total calories and term health risks [36, 37]. Moreover, the training pro-
+        macronutrients.Thisapproachalleviatestheneedforheavy cess for dieticians to develop these digital viewing skills
+        fine-tuning or large ingredient databases, by instead har- can be extensive, often requiring several years of practice
+        nessingthecompositionalreasoningcapabilitiesofgeneral to achieve proficiency [10, 11]. To address this challenge,
+        MLLMs. We evaluate the method on both a subset of the numerous calorie-tracking applications now help users log
+        Nutrition5kdataset(Nutrition320)andreal-worldsamples meals and compute macronutrient facts, such as Foodvi-
+        from the Gindee application (Gindee121), achieving more sor[6],Calzen.ai [1]andGindee[34].Nevertheless,chal-
+        accurateestimatesthanone-stepdirectqueries. Additional lengespersistinprovidingreliablemacronutrientestimates
+        experimentswithvisualprompts(boundingboxes,segmen- especially when users must manually enter easily to mis-
+        tationmasks)furtherdemonstratetherobustnessandadapt- judgedetailssuchasportionsizeandcookingmethod.
+        ability of our approach. Notably, our findings reveal that Apriorstudyshowsthatinaccurateportionsizeestima-
+        guiding MLLMs through a structured two-step reasoning tion can lead to almost three times greater error in calo-
+        process—separating “what is on the plate” from “how it riepredictions[35]. Ingredients, preparationmethods, and
+        translates nutritionally”—substantially improves the relia- even inedible parts (e.g., bones or peels) all affect nutri-
+                                         482                                        
+                                                                                    
+
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                            pert would logically separate the assessment of “what and
+                                            how much is on the plate” from “what does that translate
+                                            intonutritionally”Bybreakingdowntheproblem, weem-
+                                            power standard MLLMs to provide more accurate estima-
+                                            tions [11].                             
+                                             We validate our approach on both standard and real-
+                                            world datasets, across multiple MLLMs architectures. In
+                                            summary,ourcontributionsare:            
+                                            • Two-Step Prompting for Nutrition Estimation: A
+                                             novel prompting strategy that significantly improves the
+                                             accuracy of calorie and macronutrient estimates from
+                                             food images. By breaking the task into an analysis step
+                                             andanestimationstep,weenablegeneralMLLMstohan-
+                                             dlethiscomplexregressionproblemwithoutfine-tuning.
+                                            • Evaluation on Benchmark and Real-world Data: We
+                                             demonstrate that our two-step approach outperforms a
+                                             direct (one-step) baseline query baseline on the Nutri-
+                                             tion5k benchmark dataset [35] , including a sampled
+         Figure1.ComparisonofTwo-StepPromptingandStandard                           
+         Promptingtoestimatenutritionfromafoodphoto.Theleft subset Nutrition5k(Nutrition320), and on a new in-the-
+         panelusesatwo-stepingredientanalysis,whiletherightpanel wild dataset, Gindee121 collected from Gindee appli-
+                 offersasingle-stepestimate. cation [34]. Improvements are consistent across differ-
+                                             ent MLLMs (including Gemini-2.0-Flash [33], GPT-
+                                             4o [25], Qwen2.5-VL-72B [2], and Llama3.2-90B-
+        tional content yet are difficult to infer from visuals alone. Vision [21]), highlighting the robustness and generality
+        Traditional calorie-tracking applications rely on manual ofthemethod.       
+        user input of food type and weight, a process that is both • Visual Prompting: we also examine multiple visual
+        time-consumingandpronetoerror[40].   prompting techniques for macronutrients estimation, in-
+          Recent advances in Vision-Language Models (VLMs) cluding segmentation masks from (segmentation masks
+        like OpenAI’s GPT-4 [24] offer a promising path for au- from SAM2.1 [29] and FoodSAM [16], as well as
+        tomatedimageanalysisandtextgeneration,demonstrating bounding-box annotations from YOLO-World [3] with
+        remarkable performance in general image. However, di- humanalignment.       
+        rectlyaskingamultimodallargelanguagemodel(MLLM)                             
+        to“estimatethecaloriesinthisimage”oftenyieldsaccuracy                       
+        comparable to non-experts. Although fine-tuning MLLMs                       
+                                            2.RelatedWork                           
+        onnutritiondatacanpotentiallyimproveaccuracy,therapid                       
+        evolution of these models and the associated training cost                  
+        makesthisapproachimpractical[18]. Instead,wepropose 2.1.AutomatedDietaryAssessment
+        asolutionthatcanadapttoanyoff-the-shelfMLLMwithout                          
+        retraining,guidedbycarefullydesignedprompts. Early approaches to automated dietary assessment primar-
+          Inthiswork, weproposeatwo-steppromptingtoguide ilyreliedonconvolutionalneuralnetworks(CNNs)toiden-
+        theMLLMsthroughareasoningprocessakintothenutri- tifyfooditemsandheuristicapproachestoestimateportion
+        tionistanddieticianexaminingameal [11].Inourmethod, sizes[39].Despitebeinginnovativeatthetime,thesestrate-
+        theautomatedmacronutrientsestimationfromthefoodim- gies encountered challenges due to the high variability of
+        agetaskisdecomposedintotwosequentialpromptstoan- foodpresentationandlimitedscalability.Amajormilestone
+        alyze the meal components: Step 1 (Food Analysis), to appeared with the introduction of the Nutrition5k dataset
+        makemodelexaminestheimageandispromptedtooutput [35], which included real-world food images, depth data,
+        detailed attributes of the meal: estimate portion sizes and and extensive nutritional annotations. Nutrition5k’s com-
+        noteotherrelevantfactorssuchasthecookingmethodand prehensive scope enabled the development of multi-task
+        inedible parts. Step 2 (Nutritional Analysis) the model learningmodelscapableofpredictingcalories,macronutri-
+        incorporatestheStep1output,andisthenpromptedtoesti- ents,andportionsizessimultaneously,therebyestablishing
+        matethetotalcaloriesandmacronutrients(protein,fat,and a critical benchmark for future research in nutrition analy-
+        carbohydrates). This method mimics how a nutrition ex- sis.                 
+                                         483                                        
+
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+        2.2. Vision Transformers, Visual Prompting, and meansclusteringwithineachbin,groupingdishesintoclus-
+           Depth-BasedExtensions            ters[14,32]representing10%ofthetotalsamplesforeach
+                                            bin as Figure 2. We refer to this final subset as Nutri-
+        Asdeeplearningtechniquesmatured,attentionmechanisms                         
+                                            tion320.                                
+        led to the advent of Vision Transformers (ViTs) [5], cele-                  
+        brated for their ability to capture global context. The con-                
+        cept of Learning Visual Prompts to guide the Attention                      
+        of Vision Transformers [31] emerged as a self-supervised                    
+        method to direct the focus of a model on key image re-                      
+        gions,particularlysignificantinfoodanalysis,wheresmall                      
+        details such as garnishes and textures can affect nutrition                 
+        estimates. Concurrently, depth information became indis-                    
+        pensable for improving food volume assessments. DPF-                        
+        Nutrition[9]pioneeredRGB-Dfusionbyintegratingdepth                          
+        data with conventional RGB inputs, thus improving the                       
+        calorie and portion size predictions through a more accu-                   
+        ratethree-dimensionalviewoffooditems.                                       
+        2.3.MultimodalwithVision-LanguageModels                                     
+        Recent developments extend dietary analysis beyond vi-                      
+        sualinputsalone,incorporatinglanguagesignalstocapture                       
+        cookingmethodsandhiddeningredients. CaLoRAify[38]                           
+        exemplifiesthisdirectionbyemployingvisual-textpairings                      
+        with low-rank adaptation (LoRA) [12] to align ingredient                    
+        detection more closely with calorie estimates. Other sys-                   
+        temssuchasCoCot[15]andCalorieMe[20]reinforcethe                             
+                                             Figure2.DishimagesareembeddedwithDinoV2,combined
+        importanceofcombiningvisualandtextualcluesforrobust                         
+                                            withNutrition5kattributes,andthenclusteredviaK-Means.The
+        nutritional predictions. Summaries and surveys, like Ad-                    
+                                             bottompanelshowsa2Dprojectionoftheresultingclusters.
+        vancements in Using AI for Dietary Assessment Based on                      
+        FoodImages: ScopingReview[4]andavarietyofvision-                            
+        language model surveys [7, 8, 19], underline the fast pace                  
+        ofprogressinmultimodalAI.Theyalsomentionemerging 3.2.Gindee121              
+        techniques,includingmixture-of-expertsframeworks(e.g.,                      
+                                            InGindeeplatform,userscontributedovertwomillionfood
+        RoDE[13])andhigh-throughputmethods,thatenhancethe                           
+                                            imagestotheappandwecollected140,855user-editeden-
+        synergy between visual recognition and language under-                      
+                                            tries (images plus attributes). and applied several filters:
+        standing.                                                                   
+                                            editedcalorievaluesarebelow20,000editedcarbohydrate
+        3.Methodology                       valuesareunder2,000andeditedproteinvaluesareatleast
+                                            0. Additionally,wealsoexcludedinstanceswheretheapp’s
+        3.1.SampleSelectiononNutrition5k    originalpredictedcarbohydrateexceeded2,000grams.
+        WeselectedasubsetofsamplesfromtheNutrition5K[35] Afterfilteringthedataset, weuseGemini-1.5-Prowith
+        datasetforourexperimentstoimproveresourceusageeffi- a “nutshell prompt” (Figure 3) to cluster the data into 121
+        ciencyanddecreasecomputationaltime. groups. From each cluster, we selected the single entry
+          Toensuredataqualityandremoveoutliers,werestricted thatbestrepresenteditsgroup,ensuringadiverseandwell-
+        thedatasetbyincludingonlydishesthathadoverheadim- distributeddatasetforfurtheranalysis.
+        ages,nonzerocalorievalues,andnomorethan1,000kcal. Finally,atrainednutritionistmanuallyverifiedeachcho-
+        Tomaintaintheoriginaldistributionshape,10%ofthesam- senentrytocorrectanyremaininginaccuracies.Thisexpert
+        pleswereselectedfromeachbin.        reviewhelpedmaintainthedataset’squality.
+          To select 10% of each bin and ensure diversity among                      
+        theselectedsamplessamplediversity,weembeddedtheim-                          
+                                            3.3.VisualPromptingTechniques           
+        ages using DINOv2 [26] to obtain image features. We                         
+        then combined these features with Nutrition5K attributes, In this work, we also investigated the effectiveness of
+        suchasingredientlistsandnutritionalinformationtoform twovisualpromptingtechniques,boxpromptingandmask
+        a unified food feature representation. Next, we applied K- prompting.       
+                                         484                                        
+
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                            3.4.Two-StepPrompting                   
+                                            Nutrition estimation often involves breaking meals into
+                                            ingredient portions, as in INMUCAL [28] and CaLo-
+                                            RAify [38]. However, these methods rely on fixed ingre-
+                                            dientdatabases,causingcoveragegapsandmappingincon-
+                                            sistencies.                             
+                                             To address these limitations, we introduce a two-step
+                                            prompting method, inspired by Compositional Chain-of-
+                                            Thought (CCoT) [22]. First, the model performs a “food
+                                            analysis”, extracting detailed on portion sizes, ingredients,
+                                            and preparation methods. Second, it uses this structured
+                                            representation to estimate key nutritional values such as
+                                            calories,protein,carbohydrates,andfat. Byseparatingthe
+                                            reasoning process into two logical steps, our approach en-
+                                            hancescompositionalunderstandingwhileremaininginde-
+                                            pendent of extensive ingredient databases or fine-tuning.
+         Figure3.Gindee121datacollectionpipeline:rawimagesare The pipeline and complete prompts, demonstrating this
+         filteredandclustered,thenoneimageperclusterislabeledby structuredapproach,arepresentedinFigure4.
+             name,preparationmethod,andculturalorigin.                              
+                                            3.4.1.Step1: FoodAnalysis               
+                                            Our first step is to generate a structured representation of
+        3.3.1.BoxPrompting                                                          
+                                            fooddata,eliminatingtheneedformanuallyannotatedfood
+        Bounding boxes are used to delineate objects or regions datasets. The food analysis prompt instructs the model to
+        within an image, enabling MLLMs to extract visual fea- systematically extract key properties of a given meal, in-
+        tures [17]. We annotated bounding boxes using YOLO- cluding ingredients, portion sizes, weight, edible percent-
+        World[3],followedbyhumanalignmentandapproval,on age, oil used in food, and cooking method. Furthermore,
+        Nutrition320andGindee121datasetsattwolevels:foodan- westandardizetheoutputformatinJSON,enablingconsis-
+        notation,whichidentifiestheoverallfooditem,andingre- tentinterpretationbythemodel.
+        dientannotation,whichcapturesamorefine-grainedrepre-                        
+        sentationofindividualingredients.   3.4.2.Step2: NutritionAnalysis          
+        3.3.2.MaskPrompting                 ThestructuredfoodrepresentationfromStep1servesasan
+                                            intermediatereasoningstep.Themodelestimatesmacronu-
+        Segmentation models, including SAM2.1 [29] and Food-                        
+                                            trients by utilizing the extracted ingredients, portion sizes,
+        SAM [16], areemployed todelineateandidentifyspecific                        
+                                            weight,ediblepercentage,oilusage,cookingmethods,and
+        regions,objects,orstructureswithinimages,allowingmod-                       
+                                            rawimage.                               
+        els to focus more accurately on relevant visual informa-                    
+        tion[17].                                                                   
+                                            4.ExperimentalResults                   
+          For our experiments, we employed the following ap-                        
+        proaches: SAM2.1 for segmenting entire food images,                         
+                                            4.1.ExperimentSetup                     
+        SAM2.1 segmentation using bounding boxes as prompts,                        
+        filtering SAM2.1-segmented food images to retain only Experimentswereconductedusingvariousvisualprompts,
+        regions within the bounding box while also plotting the including bounding boxes, segmentation, and their combi-
+        bounding box, and filtering SAM2.1-segmented food im- nation, along with two-step prompting, as shown in Table
+        ageswithoutplottingtheboundingbox.  1. Forvisualpromptsthatrequireimagesegmentation,we
+          Toenhancefoodimageanalysis,wealsoutilizedseman- alsoconcatenatedtheoriginalimagetoretaincompletein-
+        tic and panoptic segmentation from FoodSAM. Semantic formation. Themultimodalmodelsusedfortestinginclude
+        segmentation was applied to generate refined food masks GPT-4o (2024-11-20), Gemini-2.0-Flash, Qwen2.5-VL[2],
+        bycombiningcoarsesemanticmaskswithSAM-generated andLlama3.2-Vision[21].Theexperimentswereconducted
+        masks, improving segmentation quality. Furthermore, we on the Nutrition320 and Gindee121 datasets. Mean Abso-
+        leveragedFoodSAM’spanopticsegmentation,whichincor- lute Error (MAE) was used as the evaluation metric to as-
+        poratesanobjectdetectortocapturefoodwithintheimage. sesstheaccuracyofmacronutrientestimationacrossdiffer-
+        Byintegratingthesesegmentationtechniques. entpromptingmethods.              
+                                         485                                        
+
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+          Figure4.Atwo-stepframeworkforfoodandnutritionanalysis.Thefirststepidentifieskeyingredients,portionsizes,andcooking
+         Two-stepframeworkforfoodnutritionanalysis.Step1extractsingredientsandportiondetails;Step2usesthatinformationtoestimate
+                                caloriesandmacronutrientsfood detail                
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+         Figure5.Thedifferentexperimentsetups(EXP00-08)appliedtothesamedishimage.Eachcolumncorrespondstoasegmentationor
+                  promptingmethodfromTable1,illustratinghowvariousapproachesisolateandlabelingredients.
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                         486                                        
+                                                                                    
+
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+         Exp Description                    pactofimagepresenceinStep2. Thisresultedinasignifi-
+         00  StandardPromptingasabaselinewithrawimage cantlyhigherMAEscoreforbothcalorieandmacronutrient
+         01  Boundingboxatfoodlevel         estimation,exceptforprotein,asshowninFigure6.
+         02  Boundingboxesatingredientlevel                                         
+         03  SAM2.1segmentedentirefoodimage                                         
+         04  SAM2.1segmentedusingaboundingboxasprompt 120                           
+         05  SAM2.1segmentedwithinaboundingbox(w/box) 100                           
+         06  SAM2.1segmentedwithinaboundingbox(w/obox)                              
+                                                    80 07 Semanticsegmentation(FoodSAM)
+         08  Panopticsegmentation(FoodSAM)          60                              
+         09  Two-StepPromptingwithrawimage(ours)                                    
+                                                    40                              
+         Table1.Overviewoftheexperimentsetups,eachemployinga 20                     
+          uniquesegmentation/promptingmethod,culminatinginour                       
+                                                     0                              
+                 Two-StepPrompting(Exp09).              Cal      Weight             
+        4.2.PerformanceComparison                                                   
+        We tested multiple prompting methods and multimodal                         
+        models (Table 1) using the Nutrition320 and Gindee121                       
+        datasets.                                                                   
+        • GPT-4o: Two-Step Prompting consistently excelled. On                      
+         Nutrition320, it achieved the lowest calorie error (78.49                  
+         kcal,12.11%betterthanbaseline)andoutperformedoth-                          
+         ers in weight, carbs, and fat. On Gindee121, it im-                        
+         provedcalorieerrorby10%(85.5kcal),narrowlybehind                           
+         Qwen2.5-VL with bounding boxes, and ranked top 3 in                        
+         allnutrients.                                                              
+        • Gemini-2.0-Flash: Two-Step Prompting improved calo-                       
+         rie,protein,andcarbestimationonNutrition320,though                         
+         boundingboxesgavebetteroverallcalorieresults.                              
+        • Qwen2.5-VL: Bounding box prompting performed best                         
+         for calorie estimation, exceeding GPT-4o Two-Step by                       
+         2%onGindee121.                                                             
+        • Llama3.2-Vision: Performspoorlyinalltests.                                
+        Overall, GPT-4o with Two-Step Prompting offers top-tier                     
+        accuracy for calorie and macronutrient estimation across                    
+        bothdatasets.                                                               
+        4.3.AblationStudy                                                           
+        Two-StepPromptingonNutrition5k                                              
+        WealsocomparedTwo-StepPromptingtoastandardone-                              
+        step baseline on the full Nutrition5k dataset. As shown                     
+        in Table 2, Two-Step Prompting outperforms the standard                     
+        prompting in calorie estimation and macronutrient break-                    
+        downforGPT-4o,Gemini-2.0-Flash,andLlama3.2-Vision,                          
+        while Qwen2.5-VL performs slightly worse than the base-                     
+        line. Among all models, GPT-4o achieves the best perfor-                    
+        manceincalorie,weight,carbohydrate,andfatestimation.                        
+        Step2: Text-BasedNutritionAnalysis                                          
+        AfterStep1,usingGPT-4oontheNutrition5kdataset,Step                          
+        2 was conducted without an input image to assess the im-                    
+                                                  EAM                               
+                                                        68.88                       
+                                                         23.08                      
+                                                          87.29                     
+                                                                 43.46 8.26 8.26    
+                                                      ComparisonofCalorieandWeightEstimation
+                                                    12                              
+                                                    10                              
+                                                     8                              
+                                                     6                              
+                                                     4                              
+                                                     2                              
+                                                     0                              
+                                                        Protein Carb Fat            
+                                                  EAM                               
+                                                        21.7 83.7 1.7               
+                                                            92.9                    
+                                                             67.7                   
+                                                              97.8                  
+                                                                 59.5 26.5 13.6     
+                                                      ComparisonofMacronutrientsEstimation
+                                                           StandardPrompting        
+                                                         Two-StepPrompting(w/image) 
+                                                        Two-StepPrompting(w/oimage) 
+                                            Figure6.MAEcomparison:Top—GPT-4o’scalorieandweight
+                                               estimates;Bottom—modelcomparisonsforprotein,
+                                                   carbohydrate,andfatonNutrition5k.
+                                            EvaluatingModelUnderstandingofFoodingredients
+                                            Themodels’comprehensionoffoodcompositionwaseval-
+                                            uatedbyextractingtheirpredictedingredients(text-based)
+                                            and comparing them to the ground truth using Jaccard
+                                            similarity. To standardize ingredient names, MiniLM-
+                                            L6-v2 [30] was employed for name mapping, aligning
+                                            the predicted ingredients with the USDA and Nutrition5k
+                                            databases prior to similarity computation. The complete
+                                            pipelineisdepictedinFigure7.            
+                                             AsshowninTable3,Two-StepPromptingimprovesin-
+                                            gredientpredictionaccuracyacrossallmodels,consistently
+                                            outperformingStandardPromptinginingredientlisting.
+                                            ComparisonwithReasoningModels           
+                                            Wealsoconductedexperimentsonreasoningmodels,such
+                                            as GPT-o1 [23]and Gemini-2.0-Flash-Thinking [33]. The
+                                            results, shown in Figure 8 for the Nutrition320 dataset,
+                                            indicate that reasoning models perform worse than stan-
+                                            dard models. However, for the Gindee121 dataset, GPT-
+                                            o1 outperforms all other models, while Gemini-2.0-Flash-
+                                         487                                        
+
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                     Nutrition320              Gindee121            
+             Model     Exp                                                          
+                            Cal  Weight Protein Carb Fat Cal  Protein Carb Fat      
+                       00  89.305† 79.122† 7.789 10.205 5.325† 97.554 6.389 13.958 6.063
+                       01  148.211 98.463 11.262 14.163 10.281 125.711 10.179 21.309 7.947
+                       02  123.133 92.122 10.525 13.580 7.965 130.731 10.287 19.408 8.022
+                       03  94.962 84.872 8.302 10.987 5.714 104.718 7.446 18.621 7.238
+                       04  92.433 81.681 8.334 9.939 5.597 103.655 6.249 12.934‡ 6.999
+             GPT-4o                                                                 
+                       05  93.728 83.628 8.202 10.308 5.589 102.252 7.263 16.451 6.712
+                       06  97.867 86.459 8.433 11.204 5.745 96.669 7.469 16.642 6.662‡
+                       07  95.516 84.372 8.319 10.748 5.556‡ 100.416‡ 6.064 12.596† 6.818
+                       08  96.559 85.372 8.208 11.185 5.678 104.487 6.099† 15.667 7.009
+                       09  78.489 73.959 7.747 8.220 5.035 85.512† 6.111‡ 10.920 6.287†
+                       00  108.480 83.762‡ 7.636 10.231 6.974 116.732 6.800 13.086 10.609
+                       01  120.419 91.572 7.473† 10.951 7.688 112.836 6.825 13.551 10.397
+                       02  96.143 81.941 7.602‡ 9.535‡ 6.232 108.290 7.815 12.913 9.601
+                       03  124.436 96.934 8.310 11.475 7.980 124.324 6.733 14.639 10.327
+                       04  124.005 96.694 8.166 11.660 7.960 120.178 7.167 17.206 10.294
+          Gemini-2.0-Flash                                                          
+                       05  134.803 104.431 8.323 12.648 8.422 122.663 7.235 16.846 11.065
+                       06  124.221 97.838 8.364 12.048 8.024 129.500 6.796 15.882 11.027
+                       07  128.319 94.644 8.115 11.896 8.258 113.396 8.635 17.020 10.292
+                       08  135.316 100.838 8.282 12.791 8.581 128.624 6.949 15.058 10.354
+                       09  102.663 90.131 7.285 9.006† 7.426 139.699 11.620 14.533 12.348
+                       00  90.110 83.952 8.952 10.510 6.171 109.839 8.041 17.649 7.484
+                       01  103.690 98.014 9.272 10.770 6.517 83.809 7.856 15.126 8.172
+                       02  103.885 97.798 8.946 10.330 6.314 107.427 7.328 15.155 6.887
+                       03  98.722 91.154 8.788 11.601 6.327 114.123 8.546 17.541 7.690
+                       04  96.127 94.268 8.981 10.857 5.982 103.654 7.053 18.391 9.484
+          Qwen2.5-VL-72B                                                            
+                       05  104.431 94.914 9.406 11.637 6.628 102.974 7.705 19.144 7.077
+                       06  102.202 93.027 8.623 12.405 6.138 103.460 6.859 15.164 8.921
+                       07  107.332 114.306 10.071 10.725 6.611 127.758 9.314 15.854 8.419
+                       08  101.944 116.739 9.922 12.371 5.925 107.275 10.102 17.768 8.906
+                       09  89.641‡ 88.381 8.186 12.590 7.214 113.670 9.237 23.688 9.028
+                       00  104.585 99.211 10.351 16.201 8.293 142.809 12.964 32.959 12.637
+                       01  131.021 120.846 11.565 17.938 11.360 150.114 14.048 22.265 11.539
+                       02  124.265 122.960 11.005 17.107 8.110 135.760 11.702 27.713 11.260
+                       03  142.188 142.270 12.064 21.726 10.901 136.614 13.235 28.062 14.904
+                       04  128.041 129.071 11.834 16.254 9.723 143.439 14.421 30.098 12.629
+         Llama3.2-90B-Vision                                                        
+                       05  146.995 136.653 12.057 16.644 9.627 132.116 10.438 20.402 9.915
+                       06  132.434 133.731 12.375 18.582 11.028 150.096 13.835 21.381 11.003
+                       07  129.283 123.286 11.778 17.190 10.603 142.151 10.693 21.660 9.558
+                       08  134.030 134.792 12.819 24.739 12.180 156.583 11.313 23.940 12.075
+                       09  128.677 127.781 16.773 19.816 11.511 189.796 21.024 43.403 19.043
+         Table2.ResultsonNutrition320andGindee121.CalorieandmacronutrientMAE(kcal)arereported,withlowervaluesindicating
+        betterperformanceacrossboththeNutrition320andGindee121datasets.ExperimentnumberscorrespondtoTable1.Boldtextindicates
+                    thebestperformance,while†and‡denotethesecondandthirdbestresults,respectively.
+        Thinking still underperforms compared to Gemini-2.0- 5.Conclusion           
+        Flash.                                                                      
+                                            We have introduced a two-step prompting technique that
+                                            emulates the logical workflow of nutrition experts in ana-
+                                         488                                        
+
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                        Nutrition5k                 
+             Model         Experiment      MeanAbsoluteError(MAE)   JaccardSimilarity
+                                        Cal  Weight Protein Carb Fat USDA Nutrition5k
+                                                                                    
+                       StandardPrompting(00) 88.86 64.34 7.12 9.29 5.95 0.311983 0.329593
+             GPT-4o                                                                 
+                       Two-StepPrompting(09) 80.32↓ 62.80↓ 7.38↑ 7.76↓ 5.62↓ 0.338045↑ 0.337873↑
+                       StandardPrompting(00) 126.03 86.56 7.76 10.94 8.26 0.320652 0.344203
+          Gemini-2.0-Flash                                                          
+                       Two-StepPrompting(09) 102.93↓ 79.85↓ 7.38↓ 8.70↓ 7.54↓ 0.337509↑ 0.346119↑
+                       StandardPrompting(00) 96.95 75.96 8.34 10.21 6.62 0.300879 0.327524
+          Qwen2.5-VL-72B                                                            
+                       Two-StepPrompting(09) 100.22↑ 74.37↓ 8.60↑ 12.10↑ 7.19↑ 0.330620↑ 0.335915↑
+                       StandardPrompting(00) 118.90 116.40 10.38 14.01 9.03 0.264221 0.280697
+         Llama3.2-90B-Vision                                                        
+                       Two-StepPrompting(09) 106.26↓ 82.52↓ 8.48↓ 11.73↓ 7.21↓ 0.329180↑ 0.322352↑
+           Table3.ComparisonofmodelperformanceontheNutrition5kdatasetunderStandardPrompting(Exp00)versusTwo-Step
+         Prompting(Exp09).MeanAbsoluteErrors(MAE)arereportedforcalories,weight,protein,carbohydrate,andfat,alongsideJaccard
+         similaritymeasures(USDAandNutrition5k).Arrowsindicateimprovement(green)ordecline(red)relativetotheStandardPrompting.
+                                                    150          139.98             
+                                                              125.98                
+                                                           108.48                   
+                                                    100  89.31                      
+                                                                                    
+                                                    50                              
+                                                                                    
+                                                     0                              
+                                                             Cal                    
+                                                                                    
+                                                                                    
+         Figure7.PipelineforEvaluatingModelUnderstandingofFood                      
+                     Ingredients.                                                   
+                                                                                    
+        lyzing food items. By decomposing the task into image-                      
+        based food analysis and subsequent nutrient calculation,                    
+        ourapproachcapitalizesonthecompositionalreasoningof                         
+        off-the-shelf MLLMs without demanding additional fine-                      
+        tuning. Theexperimentsonbothbenchmark(Nutrition5k)                          
+        and real-world (Gindee121) datasets demonstrate that our                    
+        method consistently outperforms a conventional one-step                     
+        prompt, yielding more accurate calorie and macronutrient                    
+        estimates. Moreover, we explored various visual prompt-                     
+        ing strategies—bounding boxes and segmentation—to en-                       
+        hancethebaselineperformance,highlightingtheadaptabil-                       
+        ityandextensibilityofthetwo-stepframework. Futurere-                        
+        searchdirectionsincludeintegratingdomain-specificnutri-                     
+        tional databases for refined ingredient analysis, leveraging                
+        depth information for improved portion sizing, and apply-                   
+        ing our framework to broader contexts such as meal plan-                    
+        ningandpersonalizeddietarymanagement. Ultimately,the                        
+                                                  EAM                               
+                                                         EvaluationonNutrition320   
+                                                    150                             
+                                                                 127.89             
+                                                           112.84                   
+                                                    100  97.55                      
+                                                              80.83                 
+                                                    50                              
+                                                     0                              
+                                                             Cal                    
+                                                  EAM                               
+                                                         EvaluationonGindee121      
+                                                           gpt-4o-2024-11-20        
+                                                           gemini-2.0-flash         
+                                                            o1-2024-12-17           
+                                                          gemini2-flash-thinking    
+                                            Figure8.MAEcomparisonincalorieestimationacrossstandard
+                                              andreasoningmodelsonNutrition320andGindee121.
+                                            proposedmethodoffersapracticalandscalablesolutionfor
+                                            automateddietaryassessment,promisingtoreducetheuser
+                                            burdenwhileincreasingestimationaccuracy.
+                                         489                                        
+
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+        References                             rityandPrivacy,page175–186,NewYork,NY,USA,2024.
+                                               AssociationforComputingMachinery. 3  
+         [1] 42appsLLC. Calzen.ai,2024. AccessedviaMobileApp. 1                     
+                                            [16] XingLan,JiayiLyu,HanJiang,KunkunDong,ZehaiNiu,
+         [2] ShuaiBai, KeqinChen, Xuejing Liu, JialinWang, Wenbin                   
+                                               YiZhang,andJianXue. Foodsam: Anyfoodsegmentation.
+           Ge, Sibo Song, Kai Dang, Peng Wang, Shijie Wang, Jun                     
+                                               ArXiv,abs/2308.05938,2023. 2,4       
+           Tang,andetal. Qwen2.5-vltechnicalreport,2025. 2,4                        
+                                            [17] WeifengLin,XinyuWei,RuichuanAn,PengGao,Bocheng
+         [3] Tianheng Cheng, Lin Song, Yixiao Ge, Wenyu Liu, Xing-                  
+                                               Zou, Yulin Luo, Siyuan Huang, Shanghang Zhang, and
+           gang Wang, and Ying Shan. Yolo-world: Real-time                          
+                                               Hongsheng Li. Draw-and-understand: Leveraging visual
+           open-vocabulary object detection. In Proceedings of the                  
+                                               promptstoenableMLLMstocomprehendwhatyouwant.In
+           IEEE/CVF Conference on Computer Vision and Pattern                       
+                                               TheThirteenthInternationalConferenceonLearningRepre-
+           Recognition(CVPR),pages16901–16911,2024. 2,4                             
+                                               sentations,2025. 4                   
+         [4] P. Chotwanvirat, A. Prachansuwan, P. Sridonpai, and W.                 
+                                            [18] GenLuo,YiyiZhou,TianheRen,ShengxinChen,Xiaoshuai
+           Kriengsinyos. Advancementsinusingaifordietaryassess-                     
+                                               Sun, and Rongrong Ji. Cheap and quick: Efficient vision-
+           ment based on food images: Scoping review. Journal of                    
+                                               language instruction tuning for large language models. In
+           MedicalInternetResearch,26:e51432,2024. 3                                
+                                               AdvancesinNeuralInformationProcessingSystems,pages
+         [5] Alexey Dosovitskiy, Lucas Beyer, Alexander Kolesnikov,                 
+                                               29615–29627.CurranAssociates,Inc.,2023. 2
+           Dirk Weissenborn, Xiaohua Zhai, Thomas Unterthiner,                      
+                                            [19] Peihua Ma, Yixin Wu, Ning Yu, Yang Zhang, Michael
+           MostafaDehghani,MatthiasMinderer,GeorgHeigold,Syl-                       
+                                               Backes, Qin Wang, and Cheng-I Wei. Vision-language
+           vainGelly,JakobUszkoreit,andNeilHoulsby. Animageis                       
+                                               models boost food composition compilation. CoRR,
+           worth16x16words: Transformersforimagerecognitionat                       
+                                               abs/2306.01747,2023. 3               
+           scale. ICLR,2021. 3                                                      
+                                            [20] Bavlly Magid, Mohamed Ibrahim, Yomna A. Kawashti,
+         [6] Foodvisor. Foodvisor,2023. AccessedviaMobileApp. 1                     
+                                               Mazen Mohamed, Mohamed Sabry, Hanan Hindy, Mazen
+         [7] Akash Ghosh, Arkadeep Acharya, Sriparna Saha, Vinija                   
+                                               Khaled,andWaleedMohamed.Calorieme:Animage-based
+           Jain, and Aman Chadha. Exploring the frontier of vision-                 
+                                               calorie estimator system. In 2023 Eleventh International
+           language models: A survey of current methodologies and                   
+                                               Conference on Intelligent Computing and Information Sys-
+           futuredirections,2024. 3                                                 
+                                               tems(ICICIS),pages555–560,2023. 3    
+         [8] Tobias Groot and Matias Valdenegro Toro. Overconfi-                    
+                                            [21] meta. Llama 3.2: Revolutionizing edge ai and vision with
+           denceiskey: Verbalizeduncertaintyevaluationinlargelan-                   
+                                               open, customizable models, 2024. Accessed: 2024-09-25.
+           guage and vision-language models. In Proceedings of the                  
+                                               2,4                                  
+           4th Workshop on Trustworthy Natural Language Process-                    
+                                            [22] ChancharikMitra,BrandonHuang,TrevorDarrell,andRoei
+           ing(TrustNLP2024),pages145–171,MexicoCity,Mexico,                        
+                                               Herzig.Compositionalchain-of-thoughtpromptingforlarge
+           2024.AssociationforComputationalLinguistics. 3                           
+                                               multimodalmodels,2024. 4             
+         [9] YuzheHan, QiminCheng, WenjinWu, andZiyangHuang.                        
+                                            [23] openai. Introducingopenaio1,2025. AccessedviaMobile
+           Dpf-nutrition:Foodnutritionestimationviadepthprediction                  
+                                               App. 6                               
+           andfusion. Foods,12(23),2023. 3                                          
+                                            [24] OpenAI, Josh Achiam, Steven Adler, Sandhini Agarwal,
+        [10] D.K.N.Ho,S.H.Tseng,M.C.Wu,C.K.Shih,A.P.Atika,                          
+                                               LamaAhmad,IlgeAkkaya,FlorenciaLeoniAleman,Diogo
+           Y. C. Chen, and J. S. Chang. Validity of image-based di-                 
+                                               Almeida,andetal. Gpt-4technicalreport,2023. 2
+           etary assessment methods: A systematic review and meta-                  
+           analysis. ClinicalNutrition,39(10):2945–2959,2020. 1 [25] OpenAI, :, Aaron Hurst, Adam Lerer, Adam P. Goucher,
+                                               AdamPerelman, AdityaRamesh, AidanClark, AJOstrow,
+        [11] Dang Khanh Ngan Ho, Wan-Chun Chiu, Yu-Chieh Lee,                       
+                                               AkilaWelihinda,AlanHayes,AlecRadford,andetal. Gpt-
+           Hsiu-YuehSu,Chun-ChaoChang,andChih-Yuanetal.Yao.                         
+                                               4osystemcard,2024. 2                 
+           Integrationofanimage-baseddietaryassessmentparadigm                      
+           intodietetictrainingimprovesfoodportionestimatesbyfu- [26] Maxime Oquab, Timothe´e Darcet, The´o Moutakanni, Huy
+           turedietitians. Nutrients,13(1),2021. 1,2 Vo, Marc Szafraniec, Vasil Khalidov, Pierre Fernandez,
+        [12] Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen- Daniel Haziza, Francisco Massa, Alaaeldin El-Nouby, and
+           Zhu,YuanzhiLi,SheanWang,LuWang,andWeizhuChen. etal.Dinov2:Learningrobustvisualfeatureswithoutsuper-
+           Lora: Low-rankadaptationoflargelanguagemodels,2021. vision,2023. 3       
+           3                                [27] WorldHealthOrganization. Healthydiet,2020. WHOfact
+        [13] PengkunJiao,XinlanWu,BinZhu,JingjingChen,Chong- sheets(accessed29April2020). 1
+           WahNgo,andYugangJiang. Rode:Linearrectifiedmixture [28] Keeratichamroen Arisa Chammari Kantanit Ponprachanu-
+           ofdiverseexpertsforfoodlargemulti-modalmodels,2024. vutPunnee,SrisangwanNuttarat. inmucal. 4
+           3                                [29] Nikhila Ravi, Valentin Gabeur, Yuan-Ting Hu, Ronghang
+        [14] Xin Jin and Jiawei Han. K-Means Clustering, pages 563– Hu, Chaitanya Ryali, Tengyu Ma, Haitham Khedr, Roman
+           564. SpringerUS,Boston,MA,2010. 3   Ra¨dle, Chloe Rolland, Laura Gustafson, and et al. Sam 2:
+        [15] TrevorKann,LujoBauer,andRobertK.Cunningham. Co- Segmentanythinginimagesandvideos,2024. 2,4
+           cot: Collaborative contact tracing. In Proceedings of the [30] NilsReimersandIrynaGurevych. Sentence-bert: Sentence
+           FourteenthACMConferenceonDataandApplicationSecu- embeddingsusingsiamesebert-networks. InProceedingsof
+                                         490                                        
+
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+           the2019ConferenceonEmpiricalMethodsinNaturalLan-                         
+           guage Processing. Association for Computational Linguis-                 
+           tics,2019. 6                                                             
+        [31] Razieh Rezaei, Masoud Jalili Sabet, Jindong Gu, Daniel                 
+           Rueckert, Philip Torr, and Ashkan Khakzar. Learning vi-                  
+           sualpromptsforguidingtheattentionofvisiontransformers,                   
+           2025. 3                                                                  
+        [32] AndreasStephan, LukasMiklautz, KevinSidak, JanPhilip                   
+           Wahle,BelaGipp,ClaudiaPlant,andBenjaminRoth. Text-                       
+           guidedimageclustering. InProceedingsofthe18thConfer-                     
+           enceoftheEuropeanChapteroftheAssociationforCompu-                        
+           tationalLinguistics(Volume1: LongPapers),pages2960–                      
+           2976, St. Julian’s, Malta, 2024. Association for Computa-                
+           tionalLinguistics. 3                                                     
+        [33] KorayKavukcuogluSundatPichar,DemisHassabis. Intro-                     
+           ducing gemini 2.0: our new ai model for the agentic era,                 
+           2024. 2,6                                                                
+        [34] Cariva(Thailand).Gindeefood nutritionai,2024.Accessed                  
+           viaMobileApp. 1,2                                                        
+        [35] QuinThamesetal. Nutrition5k: Towardsautomaticnutri-                    
+           tionalunderstandingofgenericfood. InCVPR,2021. 1,2,                      
+           3                                                                        
+        [36] Psychology Today. Why we underestimate what we eat,                    
+           2021. 1                                                                  
+        [37] Brian Wansink and Pierre Chandon. Meal size, not body                  
+           size,influencescalorieunderestimation. AnnalsofInternal                  
+           Medicine,145(7),2006. 1                                                  
+        [38] Dongyu Yao, Keling Yao, Junhong Zhou, and Yinghao                      
+           Zhang.Caloraify:Calorieestimationwithvisual-textpairing                  
+           andlora-drivenvisuallanguagemodels,2024. 3,4                             
+        [39] WeishanZhang,DehaiZhao,WenjuanGong,ZhongweiLi,                         
+           QinghuaLu,andSuYang.Foodimagerecognitionwithcon-                         
+           volutionalneuralnetworks. In2015IEEE12thIntlConfon                       
+           UbiquitousIntelligenceandComputingand2015IEEE12th                        
+           Intl Conf on Autonomic and Trusted Computing and 2015                    
+           IEEE15thIntlConfonScalableComputingandCommuni-                           
+           cationsandItsAssociatedWorkshops(UIC-ATC-ScalCom),                       
+           pages690–693,2015. 2                                                     
+        [40] YapingZhao,PingZhu,YizhangJiang,andKaijianXia.Vi-                      
+           sualnutritionanalysis: leveragingsegmentationandregres-                  
+           sionforfoodnutrientestimation. FrontiersinNutrition,11,                  
+           2024. 2                                                                  
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                                                                    
+                                         491                                        
+                                                                                    
