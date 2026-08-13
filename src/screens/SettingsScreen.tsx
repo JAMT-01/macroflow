@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bell, Bot, Brain, Check, Database, Download, ExternalLink, KeyRound, Ruler, Save, ShieldCheck, Trash2 } from "lucide-react";
+import { Bell, Bot, Brain, Check, Database, Download, ExternalLink, KeyRound, LogOut, Ruler, Save, ShieldCheck, Trash2 } from "lucide-react";
 import { api } from "../api";
 import type { MealMemory, Reminder, Settings } from "../types";
 
@@ -50,7 +50,7 @@ export function SettingsScreen({ settings, onSettings }: { settings: Settings; o
 
   return (
     <div className="page settings-page">
-      <header className="page-header"><div><p className="eyebrow">PERSONALIZE</p><h1>Settings</h1><p className="page-subtitle">Your data stays on this server.</p></div>{status && <div className="saved-toast"><Check size={16} /> {status}</div>}</header>
+      <header className="page-header"><div><p className="eyebrow">PERSONALIZE</p><h1>Settings</h1><p className="page-subtitle">Your data stays in your own Cloudflare account.</p></div>{status && <div className="saved-toast"><Check size={16} /> {status}</div>}</header>
 
       <div className="settings-layout">
         <div className="settings-main">
@@ -75,7 +75,7 @@ export function SettingsScreen({ settings, onSettings }: { settings: Settings; o
           </section>
         </div>
 
-        <aside className="settings-side"><section className="privacy-card"><ShieldCheck /><h3>Local-first by design</h3><p>Meals, targets, weight, memories and Telegram settings live in your local SQLite database.</p><ul><li>Images stay in <code>data/uploads</code></li><li>Only analysis requests go to OpenRouter</li><li>API keys remain server-side</li></ul></section><section className="export-card"><Database /><h3>Your data is yours</h3><p>Download a complete JSON copy at any time.</p><a className="secondary wide" href="/api/export" download><Download size={17} /> Export all data</a></section></aside>
+        <aside className="settings-side"><section className="privacy-card"><ShieldCheck /><h3>Private by design</h3><p>Meals, targets, weight, memories and Telegram settings live in your own Cloudflare account, behind this passphrase.</p><ul><li>Photos stay in your KV namespace</li><li>Only analysis requests go to OpenRouter</li><li>API keys stay server-side as Worker secrets</li></ul><button className="secondary wide sign-out" onClick={async () => { await api.logout(); location.reload(); }}><LogOut size={16} /> Sign out</button></section><section className="export-card"><Database /><h3>Your data is yours</h3><p>Download a complete JSON copy at any time.</p><a className="secondary wide" href="/api/export" download><Download size={17} /> Export all data</a></section></aside>
       </div>
     </div>
   );

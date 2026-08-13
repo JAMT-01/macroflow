@@ -2,6 +2,12 @@ import type { Analysis, BenchmarkCase, BenchmarkResearch, BenchmarkRun, CaptureM
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
+  // The session cookie expired or was cleared: reload so the Worker serves the
+  // login page instead of leaving the app showing stale data it cannot refresh.
+  if (response.status === 401) {
+    location.reload();
+    throw new Error("Your session expired. Sign in again.");
+  }
   if (!response.ok) {
     const payload = await response.json().catch(() => ({ error: response.statusText })) as { error?: string };
     throw new Error(payload.error || `Request failed (${response.status})`);
@@ -40,7 +46,8 @@ export const api = {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ weightKg })
   }),
   aiStatus: () => request<{ provider: string; available: boolean; model: string }>("/api/ai/status"),
-  testTelegram: () => request<{ ok: boolean }>("/api/telegram/test", { method: "POST" })
+  testTelegram: () => request<{ ok: boolean }>("/api/telegram/test", { method: "POST" }),
+  logout: () => request<{ ok: boolean }>("/api/auth/logout", { method: "POST" })
   , benchmarkCases: () => request<BenchmarkCase[]>("/api/benchmark/cases")
   , benchmarkModels: () => request<VisionModel[]>("/api/benchmark/models")
   , benchmarkResearch: () => request<BenchmarkResearch>("/api/benchmark/research")

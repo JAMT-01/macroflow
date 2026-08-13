@@ -1,6 +1,9 @@
 # Copy to .dev.vars for `wrangler dev`. In production these are Worker secrets,
 # set with `wrangler secret put NAME` — never committed.
 
+# The passphrase that unlocks the app. Without it the Worker fails closed.
+APP_PASSWORD=
+
 # Create an API key at https://openrouter.ai/settings/keys
 OPENROUTER_API_KEY=
 

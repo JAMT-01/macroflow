@@ -3,6 +3,8 @@ import type { FoodRow } from "../shared/analysis-core.js";
 export type Env = {
   DB: D1Database;
   PHOTOS: KVNamespace;
+  ASSETS: Fetcher;
+  APP_PASSWORD?: string;
   OPENROUTER_API_KEY?: string;
   OPENROUTER_MODEL?: string;
   TELEGRAM_WEBHOOK_SECRET?: string;

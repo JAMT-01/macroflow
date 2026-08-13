@@ -10,9 +10,12 @@
 
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    // The Worker owns /api/* and /uploads/*; everything else is the built SPA.
-    "run_worker_first": ["/api/*", "/uploads/*"]
+    // The Worker runs first for every path so the login gate covers the app
+    // shell and the meal photos, not just the API. Signed-in requests fall
+    // through to env.ASSETS.
+    "run_worker_first": true
   },
 
   "d1_databases": [

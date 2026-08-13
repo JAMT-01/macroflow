@@ -5,11 +5,77 @@ import type { CaptureMetadata, MealAnalysis, ScaleReference } from "../shared/an
 import { analyzeWithConfiguredProvider, getAiStatus, refineAnalysis } from "./analysis.js";
 import { checkReminders, handleTelegramUpdate, registerWebhook } from "./telegram.js";
 import {
+  clearFailures, clearSessionCookie, createSessionCookie, hasValidSession, isLockedOut,
+  loginPage, recordFailure, verifyPassword
+} from "./auth.js";
+import {
   deleteAppSecret, deletePhoto, getOpenRouterApiKey, getOpenRouterKeySource, getPhoto, getSettings,
   photoKey, putPhoto, setAppSecret, type Env
 } from "./db.js";
 
 const app = new Hono<{ Bindings: Env }>();
+
+/**
+ * Paths that must stay reachable without a session.
+ *
+ * The Telegram webhook is called by Telegram's servers, which cannot carry a
+ * cookie; it authenticates with the x-telegram-bot-api-secret-token header
+ * instead. /api/health is an unauthenticated liveness probe that reveals no
+ * diary data.
+ */
+const PUBLIC_PATHS = new Set(["/api/health", "/api/auth/login", "/api/telegram/webhook"]);
+
+const clientIp = (c: { req: { header: (name: string) => string | undefined } }) =>
+  c.req.header("cf-connecting-ip") || c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+
+app.use("*", async (c, next) => {
+  const password = c.env.APP_PASSWORD;
+  const path = new URL(c.req.url).pathname;
+  if (PUBLIC_PATHS.has(path)) return next();
+
+  // Without a configured passphrase the diary would be world-readable, so fail
+  // closed rather than open: serve the login page explaining how to set one.
+  if (!password) {
+    if (path.startsWith("/api/")) return c.json({ error: "This Macroflow has no passphrase configured yet." }, 503);
+    return c.html(loginPage({ configured: false }), 503);
+  }
+
+  if (await hasValidSession(c.req.raw, password)) return next();
+
+  if (path.startsWith("/api/") || path.startsWith("/uploads/")) {
+    return c.json({ error: "Not signed in", signedOut: true }, 401);
+  }
+  return c.html(loginPage({ configured: true }), 401);
+});
+
+app.post("/api/auth/login", async (c) => {
+  const password = c.env.APP_PASSWORD;
+  if (!password) return c.html(loginPage({ configured: false }), 503);
+
+  const ip = clientIp(c);
+  if (await isLockedOut(c.env, ip)) {
+    return c.html(loginPage({ configured: true, error: "Too many attempts. Try again in 15 minutes." }), 429);
+  }
+
+  const form = await c.req.formData();
+  const candidate = String(form.get("password") || "");
+  if (!verifyPassword(candidate, password)) {
+    const { remaining } = await recordFailure(c.env, ip);
+    const error = remaining > 0
+      ? `That passphrase is not right. ${remaining} attempt${remaining === 1 ? "" : "s"} left.`
+      : "Too many attempts. Try again in 15 minutes.";
+    return c.html(loginPage({ configured: true, error }), 401);
+  }
+
+  await clearFailures(c.env, ip);
+  c.header("set-cookie", await createSessionCookie(password));
+  return c.redirect("/", 303);
+});
+
+app.post("/api/auth/logout", (c) => {
+  c.header("set-cookie", clearSessionCookie());
+  return c.json({ ok: true });
+});
 
 const itemSchema = z.object({
   foodId: z.number().nullable().optional(),
@@ -390,9 +456,16 @@ app.get("/uploads/:key", async (c) => {
   if (!photo) return c.notFound();
   return c.body(photo.bytes, 200, {
     "content-type": photo.contentType,
-    "cache-control": "private, max-age=31536000, immutable"
+    // private keeps meal photos out of shared caches, and Vary: Cookie means any
+    // cache that does store one keys it on the session rather than serving it to
+    // a signed-out visitor.
+    "cache-control": "private, max-age=31536000, immutable",
+    "vary": "Cookie"
   });
 });
+
+// Anything not handled above is the built SPA, served only once signed in.
+app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));
 
 app.onError((error, c) => {
   console.error(error);
