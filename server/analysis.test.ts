@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { analyzeDescription, buildSinglePhotoPrompt, calculateEstimateRange, calibrateAnalysisConfidence, matchFood, suggestArgentineMealType } from "./analysis.js";
+import { normalizeItem } from "../shared/analysis-core.js";
 
 const capture = { width: 3024, height: 4032, brightness: .5, contrast: .2, sharpness: .4, qualityScore: 88, issues: [] };
 
@@ -99,6 +100,38 @@ describe("local meal analysis", () => {
     const result = analyzeDescription("200g milanesa de pollo", { localTime: "21:45" });
     expect(result.mealTypeSuggestion.type).toBe("Dinner");
     expect(result.mealTypeSuggestion.explanation).toContain("cena");
+  });
+
+  it("scales fibre with the portion from the food table", () => {
+    // Lentils are 7.9 g fibre per 100 g, so a 200 g portion is 15.8 g.
+    const result = analyzeDescription("200g lentils");
+    expect(result.items[0].name).toBe("Lentils, cooked");
+    expect(result.items[0].fiber).toBeCloseTo(15.8, 1);
+  });
+
+  it("reports zero fibre for meat and pure oils", () => {
+    expect(analyzeDescription("200g chicken breast").items[0].fiber).toBe(0);
+    expect(analyzeDescription("10g olive oil").items[0].fiber).toBe(0);
+  });
+
+  it("never lets a model's fibre exceed the carbohydrate it belongs to", () => {
+    const measurement = { referenceMode: "none", plateDiameterCm: null, plateProfile: null, plateVisible: false, wholePlateVisible: false, plateUsedAsScale: false, viewAngleDeg: null, scaleConfidence: "none", captureQuality: "good", explanation: "" } as const;
+    const item = normalizeItem([], { name: "Mystery salad", grams: 100, calories: 80, protein: 2, carbs: 6, fiber: 40, fat: 1 }, measurement, false);
+    expect(item.fiber).toBe(6);
+    expect(item.carbs).toBe(6);
+  });
+
+  it("tells the model that fibre is part of carbs, not added to it", () => {
+    const prompt = buildSinglePhotoPrompt({ mode: "none", diameterCm: null }, "ensalada", [], capture);
+    expect(prompt).toContain("Fibre is a COMPONENT of the carbohydrate figure");
+    expect(prompt).toContain("fiber must never exceed carbs");
+  });
+
+  it("carries fibre through the aggregated estimate range", () => {
+    const item = analyzeDescription("100g black beans").items[0];
+    const range = calculateEstimateRange([{ ...item, gramsLow: 80, gramsHigh: 120 }]);
+    expect(range.fiber.low).toBeLessThan(item.fiber);
+    expect(range.fiber.high).toBeGreaterThan(item.fiber);
   });
 
   it("aggregates item gram uncertainty into macro ranges", () => {

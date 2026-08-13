@@ -21,6 +21,7 @@ export type Settings = {
   proteinTarget: number;
   carbsTarget: number;
   fatTarget: number;
+  fiberTarget: number;
   weightKg: number;
   heightCm: number;
   age: number;
@@ -44,7 +45,7 @@ export type Settings = {
   dayEndsAt: string;
 };
 
-export type Nutrients = { calories: number; protein: number; carbs: number; fat: number };
+export type Nutrients = { calories: number; protein: number; carbs: number; fiber: number; fat: number };
 
 export type NutrientRange = { low: number; high: number };
 
@@ -52,6 +53,7 @@ export type EstimateRange = {
   calories: NutrientRange;
   protein: NutrientRange;
   carbs: NutrientRange;
+  fiber: NutrientRange;
   fat: NutrientRange;
 };
 
@@ -78,7 +80,10 @@ export type MeasurementAssessment = {
   explanation: string;
 };
 
-export type MealItem = Nutrients & {
+// Fibre is optional on a single item so hand-entered quick-adds and older saved
+// meals stay valid; sumItems treats a missing value as 0.
+export type MealItem = Omit<Nutrients, "fiber"> & {
+  fiber?: number;
   id?: string;
   foodId?: number | null;
   name: string;

@@ -25,7 +25,9 @@ export function Onboarding({ initial, onComplete }: { initial: Settings; onCompl
     const protein = Math.round(form.weightKg * (form.goal === "gain" ? 2 : 1.8));
     const fat = Math.round(form.weightKg * 0.8);
     const carbs = Math.max(80, Math.round((calories - protein * 4 - fat * 9) / 4));
-    return { calories, protein, fat, carbs };
+    // Argentine GAPA guidance is at least 25 g of fibre a day; scale gently with intake.
+    const fiber = Math.max(25, Math.round(calories / 1000 * 14));
+    return { calories, protein, fat, carbs, fiber };
   }, [form]);
 
   async function finish() {
@@ -37,7 +39,8 @@ export function Onboarding({ initial, onComplete }: { initial: Settings; onCompl
         calorieTarget: targets.calories,
         proteinTarget: targets.protein,
         carbsTarget: targets.carbs,
-        fatTarget: targets.fat
+        fatTarget: targets.fat,
+        fiberTarget: targets.fiber
       });
       await api.addWeight(form.weightKg);
       onComplete(settings);
@@ -91,7 +94,7 @@ export function Onboarding({ initial, onComplete }: { initial: Settings; onCompl
                 <button key={goal.id} className={form.goal === goal.id ? "selected" : ""} onClick={() => setForm({ ...form, goal: goal.id })}><span>{goal.title}<small>{goal.note}</small></span>{form.goal === goal.id && <Check size={19} />}</button>
               ))}
             </div>
-            <div className="target-preview"><div><strong>{targets.calories.toLocaleString()}</strong><span>kcal</span></div><div><strong>{targets.protein}g</strong><span>protein</span></div><div><strong>{targets.carbs}g</strong><span>carbs</span></div><div><strong>{targets.fat}g</strong><span>fat</span></div></div>
+            <div className="target-preview"><div><strong>{targets.calories.toLocaleString()}</strong><span>kcal</span></div><div><strong>{targets.protein}g</strong><span>protein</span></div><div><strong>{targets.carbs}g</strong><span>carbs</span></div><div><strong>{targets.fat}g</strong><span>fat</span></div><div><strong>{targets.fiber}g</strong><span>fiber</span></div></div>
             <p className="fine-print"><ShieldCheck size={15} /> This is an editable estimate based on Mifflin–St Jeor.</p>
             <div className="button-row"><button className="ghost" onClick={() => setStep(1)}>Back</button><button className="primary" disabled={saving} onClick={finish}>{saving ? "Creating…" : "Start tracking"} <ArrowRight size={18} /></button></div>
           </div>

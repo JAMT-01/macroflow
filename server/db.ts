@@ -24,6 +24,7 @@ db.exec(`
     protein_target REAL NOT NULL DEFAULT 160,
     carbs_target REAL NOT NULL DEFAULT 230,
     fat_target REAL NOT NULL DEFAULT 70,
+    fiber_target REAL NOT NULL DEFAULT 30,
     weight_kg REAL NOT NULL DEFAULT 75,
     height_cm REAL NOT NULL DEFAULT 175,
     age INTEGER NOT NULL DEFAULT 30,
@@ -58,6 +59,7 @@ db.exec(`
     calories REAL NOT NULL,
     protein REAL NOT NULL,
     carbs REAL NOT NULL,
+    fiber REAL NOT NULL DEFAULT 0,
     fat REAL NOT NULL,
     aliases TEXT NOT NULL DEFAULT '[]',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -85,6 +87,7 @@ db.exec(`
     calories REAL NOT NULL,
     protein REAL NOT NULL,
     carbs REAL NOT NULL,
+    fiber REAL NOT NULL DEFAULT 0,
     fat REAL NOT NULL
   );
 
@@ -149,6 +152,16 @@ function ensureColumn(table: string, column: string, declaration: string) {
 }
 
 ensureColumn("settings", "plate_diameter_cm", "REAL NOT NULL DEFAULT 25");
+ensureColumn("settings", "fiber_target", "REAL NOT NULL DEFAULT 30");
+ensureColumn("foods", "fiber", "REAL NOT NULL DEFAULT 0");
+ensureColumn("meal_items", "fiber", "REAL NOT NULL DEFAULT 0");
+
+// Databases seeded before fibre tracking have the column but no values, and the
+// seed block below only runs on an empty table. Backfill from the seed list.
+if (Number((db.prepare("SELECT COUNT(*) count FROM foods WHERE fiber = 0").get() as { count: number }).count) > 0) {
+  const backfill = db.prepare("UPDATE foods SET fiber = ? WHERE name = ? AND fiber = 0");
+  for (const food of seedFoods) backfill.run(food.fiber, food.name);
+}
 ensureColumn("meals", "image_paths_json", "TEXT NOT NULL DEFAULT '[]'");
 db.prepare("UPDATE meals SET meal_type = 'Treat' WHERE meal_type = 'Snack'").run();
 
@@ -173,11 +186,11 @@ if (benchmarkCount === 0) {
 const foodCount = Number((db.prepare("SELECT COUNT(*) AS count FROM foods").get() as { count: number }).count);
 if (foodCount === 0) {
   const insert = db.prepare(`
-    INSERT INTO foods (name, brand, category, emoji, serving_label, serving_grams, calories, protein, carbs, fat, aliases)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO foods (name, brand, category, emoji, serving_label, serving_grams, calories, protein, carbs, fiber, fat, aliases)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   for (const food of seedFoods) {
-    insert.run(food.name, food.brand ?? "", food.category, food.emoji, food.servingLabel, food.servingGrams, food.calories, food.protein, food.carbs, food.fat, JSON.stringify(food.aliases));
+    insert.run(food.name, food.brand ?? "", food.category, food.emoji, food.servingLabel, food.servingGrams, food.calories, food.protein, food.carbs, food.fiber, food.fat, JSON.stringify(food.aliases));
   }
 }
 
@@ -189,6 +202,7 @@ export type DbSettings = {
   protein_target: number;
   carbs_target: number;
   fat_target: number;
+  fiber_target: number;
   weight_kg: number;
   height_cm: number;
   age: number;

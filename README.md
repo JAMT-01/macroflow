@@ -12,7 +12,7 @@ Macroflow is a personal macro tracker built for an iPhone camera, running entire
 - Persistent meal memories reused by future OpenRouter analyses when relevant
 - Manual food search, direct macro entry, repeat meal, and delete
 - Automatic Argentine meal category: desayuno, almuerzo, merienda, cena or antojo
-- Daily calories/macros, 30-day progress, and weight check-ins
+- Daily calories, protein, carbs, fat and **fibre**, 30-day progress, and weight check-ins
 - Telegram reminders, daily totals, and `/log` text logging
 - D1 persistence, KV image storage, and full JSON export
 - Server-authoritative “today” using your configured IANA timezone
@@ -148,6 +148,16 @@ The plate is only useful when the complete outer rim is in frame, so every scan 
 - **No size reference** — for a different plate, a bowl, a pan, a wrapper, or a cropped rim. The model is told not to convert pixels to centimetres at all and falls back to familiar serving sizes with a wider uncertainty range.
 
 Whatever you pick, the review screen reports whether the plate was actually used as scale, and confidence is capped when it was not.
+
+## Fibre
+
+Every food carries a fibre figure and the model estimates it for anything it recognises from a photo. Fibre appears as a fourth ring on the diary, in the review screen's estimate summary, in the `/today` Telegram reply, and as its own daily target in Settings.
+
+**Fibre is a component of carbohydrate, not an addition to it.** A food with 30 g carbs of which 5 g is fibre still counts as 30 g carbs. The prompt states this explicitly and the server clamps any model answer so `fiber` can never exceed `carbs` — without that, carb totals inflate on high-fibre meals. Calories are unaffected.
+
+The onboarding target starts at 14 g per 1,000 kcal with a floor of 25 g, matching Argentine GAPA guidance; change it any time in **Settings → Daily targets**.
+
+Meals logged before this feature existed show 0 g fibre — the value was never recorded, and back-filling it would be inventing data.
 
 ## Argentine meal categories
 

@@ -18,6 +18,7 @@ const itemSchema = z.object({
   calories: z.number().nonnegative(),
   protein: z.number().nonnegative(),
   carbs: z.number().nonnegative(),
+  fiber: z.number().nonnegative().optional(),
   fat: z.number().nonnegative()
 });
 
@@ -61,6 +62,7 @@ async function serializeSettings(env: Env) {
     proteinTarget: settings.protein_target,
     carbsTarget: settings.carbs_target,
     fatTarget: settings.fat_target,
+    fiberTarget: settings.fiber_target,
     weightKg: settings.weight_kg,
     heightCm: settings.height_cm,
     age: settings.age,
@@ -126,6 +128,7 @@ async function getMealRows(env: Env, date: string) {
       calories: item.calories,
       protein: item.protein,
       carbs: item.carbs,
+      fiber: item.fiber,
       fat: item.fat
     }))
   }));
@@ -153,7 +156,7 @@ app.patch("/api/settings", async (c) => {
 
   const mapping: Record<string, string> = {
     name: "name", onboardingComplete: "onboarding_complete", calorieTarget: "calorie_target", proteinTarget: "protein_target",
-    carbsTarget: "carbs_target", fatTarget: "fat_target", weightKg: "weight_kg", heightCm: "height_cm", age: "age",
+    carbsTarget: "carbs_target", fatTarget: "fat_target", fiberTarget: "fiber_target", weightKg: "weight_kg", heightCm: "height_cm", age: "age",
     sex: "sex", activity: "activity", goal: "goal", theme: "theme", openrouterModel: "openrouter_model",
     telegramBotToken: "telegram_bot_token", telegramChatId: "telegram_chat_id", timezone: "timezone",
     plateDiameterCm: "plate_diameter_cm"
@@ -185,7 +188,7 @@ app.get("/api/foods", async (c) => {
   return c.json((rows.results ?? []).map((row) => ({
     id: row.id, name: row.name, brand: row.brand, category: row.category, emoji: row.emoji,
     servingLabel: row.serving_label, servingGrams: row.serving_grams,
-    calories: row.calories, protein: row.protein, carbs: row.carbs, fat: row.fat
+    calories: row.calories, protein: row.protein, carbs: row.carbs, fiber: row.fiber, fat: row.fat
   })));
 });
 
@@ -195,8 +198,8 @@ app.get("/api/dashboard", async (c) => {
   const meals = await getMealRows(c.env, date);
   const totals = meals.flatMap((meal) => meal.items).reduce((acc, item) => ({
     calories: acc.calories + Number(item.calories), protein: acc.protein + Number(item.protein),
-    carbs: acc.carbs + Number(item.carbs), fat: acc.fat + Number(item.fat)
-  }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+    carbs: acc.carbs + Number(item.carbs), fiber: acc.fiber + Number(item.fiber ?? 0), fat: acc.fat + Number(item.fat)
+  }), { calories: 0, protein: 0, carbs: 0, fiber: 0, fat: 0 });
   return c.json({ date, settings: await serializeSettings(c.env), totals, meals });
 });
 
@@ -210,8 +213,8 @@ app.post("/api/meals", async (c) => {
     c.env.DB.prepare("INSERT INTO meals (id, logged_at, meal_type, title, image_path, image_paths_json, notes, source, confidence) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
       .bind(id, loggedAt, parsed.mealType, parsed.title, parsed.imagePath ?? imagePaths[0] ?? null, JSON.stringify(imagePaths), parsed.notes ?? "", parsed.source ?? "manual", parsed.confidence ?? null),
     ...parsed.items.map((item) =>
-      c.env.DB.prepare("INSERT INTO meal_items (id, meal_id, food_id, name, grams, calories, protein, carbs, fat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-        .bind(crypto.randomUUID(), id, item.foodId ?? null, item.name, item.grams, item.calories, item.protein, item.carbs, item.fat)
+      c.env.DB.prepare("INSERT INTO meal_items (id, meal_id, food_id, name, grams, calories, protein, carbs, fiber, fat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        .bind(crypto.randomUUID(), id, item.foodId ?? null, item.name, item.grams, item.calories, item.protein, item.carbs, item.fiber ?? 0, item.fat)
     )
   ]);
   return c.json({ id }, 201);
@@ -244,9 +247,9 @@ app.post("/api/meals/:id/duplicate", async (c) => {
       .bind(id, new Date().toISOString(), String(meal.meal_type), String(meal.title), meal.image_path == null ? null : String(meal.image_path),
         String(meal.image_paths_json || "[]"), String(meal.notes ?? ""), "repeat", meal.confidence == null ? null : Number(meal.confidence)),
     ...(items.results ?? []).map((item) =>
-      c.env.DB.prepare("INSERT INTO meal_items (id, meal_id, food_id, name, grams, calories, protein, carbs, fat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      c.env.DB.prepare("INSERT INTO meal_items (id, meal_id, food_id, name, grams, calories, protein, carbs, fiber, fat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
         .bind(crypto.randomUUID(), id, item.food_id == null ? null : Number(item.food_id), String(item.name),
-          Number(item.grams), Number(item.calories), Number(item.protein), Number(item.carbs), Number(item.fat))
+          Number(item.grams), Number(item.calories), Number(item.protein), Number(item.carbs), Number(item.fiber ?? 0), Number(item.fat))
     )
   ]);
   return c.json({ id }, 201);
@@ -310,24 +313,24 @@ app.get("/api/history", async (c) => {
   };
   const mealTotals = await c.env.DB.prepare(`
     SELECT m.id, m.logged_at loggedAt, ROUND(SUM(mi.calories),1) calories,
-           ROUND(SUM(mi.protein),1) protein, ROUND(SUM(mi.carbs),1) carbs, ROUND(SUM(mi.fat),1) fat
+           ROUND(SUM(mi.protein),1) protein, ROUND(SUM(mi.carbs),1) carbs, ROUND(SUM(mi.fiber),1) fiber, ROUND(SUM(mi.fat),1) fat
     FROM meals m JOIN meal_items mi ON mi.meal_id = m.id
     WHERE m.logged_at >= ? AND m.logged_at < ?
     GROUP BY m.id ORDER BY m.logged_at
   `).bind(range.start, range.end).all<Record<string, unknown>>();
 
-  const grouped = new Map<string, { date: string; calories: number; protein: number; carbs: number; fat: number; meals: number }>();
+  const grouped = new Map<string, { date: string; calories: number; protein: number; carbs: number; fiber: number; fat: number; meals: number }>();
   for (const meal of mealTotals.results ?? []) {
     const date = dateInTimeZone(String(meal.loggedAt), settings.timezone);
-    const day = grouped.get(date) ?? { date, calories: 0, protein: 0, carbs: 0, fat: 0, meals: 0 };
+    const day = grouped.get(date) ?? { date, calories: 0, protein: 0, carbs: 0, fiber: 0, fat: 0, meals: 0 };
     day.calories += Number(meal.calories); day.protein += Number(meal.protein);
-    day.carbs += Number(meal.carbs); day.fat += Number(meal.fat); day.meals += 1;
+    day.carbs += Number(meal.carbs); day.fiber += Number(meal.fiber ?? 0); day.fat += Number(meal.fat); day.meals += 1;
     grouped.set(date, day);
   }
   const nutrition = [...grouped.values()].map((day) => ({
     ...day,
     calories: Math.round(day.calories * 10) / 10, protein: Math.round(day.protein * 10) / 10,
-    carbs: Math.round(day.carbs * 10) / 10, fat: Math.round(day.fat * 10) / 10
+    carbs: Math.round(day.carbs * 10) / 10, fiber: Math.round(day.fiber * 10) / 10, fat: Math.round(day.fat * 10) / 10
   }));
   const weights = await c.env.DB.prepare("SELECT id, recorded_at recordedAt, weight_kg weightKg FROM weight_entries ORDER BY recorded_at ASC LIMIT 365").all();
   return c.json({ nutrition, weights: weights.results ?? [] });

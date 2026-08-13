@@ -25,7 +25,7 @@ export function LogModal({ defaultMealType, date, settings, onClose, onSaved }: 
   const [query, setQuery] = useState("");
   const [foods, setFoods] = useState<Food[]>([]);
   const [selected, setSelected] = useState<MealItem[]>([]);
-  const [quick, setQuick] = useState({ title: "", calories: 0, protein: 0, carbs: 0, fat: 0 });
+  const [quick, setQuick] = useState({ title: "", calories: 0, protein: 0, carbs: 0, fiber: 0, fat: 0 });
   const fileInput = useRef<HTMLInputElement>(null);
 
   const scaleReference: ScaleReference = scaleMode === "none"
@@ -97,7 +97,7 @@ export function LogModal({ defaultMealType, date, settings, onClose, onSaved }: 
     const items = analysis.items.map((item, itemIndex) => {
       if (itemIndex !== index) return item;
       const ratio = item.grams ? grams / item.grams : 1;
-      return { ...item, grams, gramsLow: item.gramsLow == null ? undefined : item.gramsLow * ratio, gramsHigh: item.gramsHigh == null ? undefined : item.gramsHigh * ratio, calories: item.calories * ratio, protein: item.protein * ratio, carbs: item.carbs * ratio, fat: item.fat * ratio };
+      return { ...item, grams, gramsLow: item.gramsLow == null ? undefined : item.gramsLow * ratio, gramsHigh: item.gramsHigh == null ? undefined : item.gramsHigh * ratio, calories: item.calories * ratio, protein: item.protein * ratio, carbs: item.carbs * ratio, fiber: (item.fiber ?? 0) * ratio, fat: item.fat * ratio };
     });
     setAnalysis({ ...analysis, items });
   }
@@ -105,14 +105,14 @@ export function LogModal({ defaultMealType, date, settings, onClose, onSaved }: 
   function addFood(food: Food) {
     const grams = food.servingGrams;
     const factor = grams / 100;
-    setSelected((items) => [...items, { foodId: food.id, name: food.name, emoji: food.emoji, grams, calories: food.calories * factor, protein: food.protein * factor, carbs: food.carbs * factor, fat: food.fat * factor }]);
+    setSelected((items) => [...items, { foodId: food.id, name: food.name, emoji: food.emoji, grams, calories: food.calories * factor, protein: food.protein * factor, carbs: food.carbs * factor, fiber: (food.fiber ?? 0) * factor, fat: food.fat * factor }]);
   }
 
   function updateSelectedGrams(index: number, grams: number) {
     setSelected((items) => items.map((item, itemIndex) => {
       if (itemIndex !== index) return item;
       const ratio = item.grams ? grams / item.grams : 1;
-      return { ...item, grams, calories: item.calories * ratio, protein: item.protein * ratio, carbs: item.carbs * ratio, fat: item.fat * ratio };
+      return { ...item, grams, calories: item.calories * ratio, protein: item.protein * ratio, carbs: item.carbs * ratio, fiber: (item.fiber ?? 0) * ratio, fat: item.fat * ratio };
     }));
   }
 
@@ -163,12 +163,12 @@ export function LogModal({ defaultMealType, date, settings, onClose, onSaved }: 
 
           {analysis && analysisTotals && <div className="review-flow">
             <div className="review-hero">{analysis.imagePath && <img src={analysis.imagePath} alt="Analyzed meal" />}<div><span className={`confidence ${analysis.confidence >= .75 ? "good" : "medium"}`}>{Math.round(analysis.confidence * 100)}% confidence</span><h2>{analysis.title}</h2><p>{analysis.provider === "openrouter" ? `${settings.openrouterModel} · ${analysis.usage ? `$${analysis.usage.costUsd.toFixed(4)} · ${(analysis.usage.latencyMs / 1000).toFixed(1)}s` : "estimate"}` : "Local text match"}</p></div></div>
-            <div className="estimate-summary"><div><strong>{Math.round(analysisTotals.calories)}</strong><span>calories</span></div><div><strong>{Math.round(analysisTotals.protein)}g</strong><span>protein</span></div><div><strong>{Math.round(analysisTotals.carbs)}g</strong><span>carbs</span></div><div><strong>{Math.round(analysisTotals.fat)}g</strong><span>fat</span></div></div>
+            <div className="estimate-summary five"><div><strong>{Math.round(analysisTotals.calories)}</strong><span>calories</span></div><div><strong>{Math.round(analysisTotals.protein)}g</strong><span>protein</span></div><div><strong>{Math.round(analysisTotals.carbs)}g</strong><span>carbs</span></div><div><strong>{Math.round(analysisTotals.fat)}g</strong><span>fat</span></div><div><strong>{Math.round(analysisTotals.fiber)}g</strong><span>fiber</span></div></div>
             {analysis.range && <div className="estimate-range"><div><span>Likely calorie range</span><strong>{Math.round(analysis.range.calories.low)}–{Math.round(analysis.range.calories.high)} kcal</strong></div><small>One photo cannot reveal exact food height or hidden ingredients. The range narrows when the plate is fully visible and your recipe memory matches.</small></div>}
             {analysis.measurement && <div className={`measurement-card ${analysis.measurement.scaleConfidence}`}><Ruler size={18} /><div><strong>{analysis.measurement.referenceMode === "none" ? "No size reference used" : analysis.measurement.plateUsedAsScale ? `${analysis.measurement.plateDiameterCm} cm plate diameter applied as scale` : "Plate scale could not be applied"}</strong><span>{analysis.measurement.explanation}</span><small>{analysis.measurement.viewAngleDeg == null ? "View angle unknown" : `Approx. ${Math.round(analysis.measurement.viewAngleDeg)}° view`} · {analysis.measurement.scaleConfidence} scale confidence</small></div></div>}
             {suggestion && <div className="meal-type-card"><span className="meal-type-emoji">{mealTypeMeta[suggestion.type].emoji}</span><div><strong>{resolvedMealType === suggestion.type ? `Filed as ${suggestion.type}` : `Saving as ${resolvedMealType}, not ${suggestion.type}`} <em>{mealTypeMeta[resolvedMealType].hint}</em></strong><span>{suggestion.explanation}</span><small>{Math.round(suggestion.confidence * 100)}% · Argentine meal pattern · {analysis.provider === "openrouter" ? "food, your note and local time" : "local time and matched foods"}</small></div>{resolvedMealType === suggestion.type ? <select value={mealType} onChange={(e) => setMealType(e.target.value as MealTypeChoice)} aria-label="Meal category">{mealTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select> : <button type="button" onClick={() => setMealType(suggestion.type)}>Use {suggestion.type}</button>}</div>}
             <div className="review-title"><h3>Detected foods</h3><span>Adjust portions</span></div>
-            <div className="review-items">{analysis.items.map((item, index) => <div className="review-item" key={`${item.name}-${index}`}><span className="food-emoji">{item.emoji || "🍽️"}</span><div className="review-item-copy"><strong>{item.name}</strong><p>{Math.round(item.calories)} kcal · P {item.protein.toFixed(1)} · C {item.carbs.toFixed(1)} · F {item.fat.toFixed(1)}</p>{(item.visualEvidence || item.portionBasis) && <small><Eye size={11} /> {item.visualEvidence} {item.portionBasis && ` Portion: ${item.portionBasis}`}</small>}</div><label><input type="number" min="0" step="5" value={Math.round(item.grams)} onChange={(e) => updateAnalysisGrams(index, +e.target.value)} /><span>g</span></label><button onClick={() => setAnalysis({ ...analysis, items: analysis.items.filter((_, i) => i !== index) })}><Trash2 size={16} /></button></div>)}</div>
+            <div className="review-items">{analysis.items.map((item, index) => <div className="review-item" key={`${item.name}-${index}`}><span className="food-emoji">{item.emoji || "🍽️"}</span><div className="review-item-copy"><strong>{item.name}</strong><p>{Math.round(item.calories)} kcal · P {item.protein.toFixed(1)} · C {item.carbs.toFixed(1)} · F {item.fat.toFixed(1)} · Fib {(item.fiber ?? 0).toFixed(1)}</p>{(item.visualEvidence || item.portionBasis) && <small><Eye size={11} /> {item.visualEvidence} {item.portionBasis && ` Portion: ${item.portionBasis}`}</small>}</div><label><input type="number" min="0" step="5" value={Math.round(item.grams)} onChange={(e) => updateAnalysisGrams(index, +e.target.value)} /><span>g</span></label><button onClick={() => setAnalysis({ ...analysis, items: analysis.items.filter((_, i) => i !== index) })}><Trash2 size={16} /></button></div>)}</div>
             {analysis.assumptions.length > 0 && <div className="assumption-card"><Info size={18} /><div><strong>Confirm these assumptions</strong><ul>{analysis.assumptions.map((assumption, index) => <li key={`${assumption}-${index}`}>{assumption}</li>)}</ul></div></div>}
             {analysis.highImpactQuestion && <button className="high-impact-question" onClick={() => setChatInput(analysis.highImpactQuestion || "")}><Sparkles size={17} /><span><strong>Best question to improve this estimate</strong><small>{analysis.highImpactQuestion}</small></span></button>}
             {analysis.appliedMemories && analysis.appliedMemories.length > 0 && <div className="memory-used"><Brain size={18} /><div><strong>Personal memory applied</strong><span>{analysis.appliedMemories.join(" · ")}</span></div></div>}
@@ -195,7 +195,7 @@ export function LogModal({ defaultMealType, date, settings, onClose, onSaved }: 
           {!analysis && mode === "quick" && <div className="quick-flow">
             <div className="quick-icon"><Utensils /></div><h2>Already know the numbers?</h2><p className="muted">Add totals directly without searching for individual foods.</p>
             <label className="field"><span>Meal name</span><input placeholder="Post-workout shake" value={quick.title} onChange={(e) => setQuick({ ...quick, title: e.target.value })} /></label>
-            <div className="form-grid two quick-nutrients">{(["calories", "protein", "carbs", "fat"] as const).map((key) => <label className="field" key={key}><span>{key[0].toUpperCase() + key.slice(1)} {key !== "calories" && "(g)"}</span><input type="number" min="0" value={quick[key] || ""} placeholder="0" onChange={(e) => setQuick({ ...quick, [key]: +e.target.value })} /></label>)}</div>
+            <div className="form-grid two quick-nutrients">{(["calories", "protein", "carbs", "fat", "fiber"] as const).map((key) => <label className="field" key={key}><span>{key[0].toUpperCase() + key.slice(1)} {key !== "calories" && "(g)"}</span><input type="number" min="0" value={quick[key] || ""} placeholder="0" onChange={(e) => setQuick({ ...quick, [key]: +e.target.value })} /></label>)}</div>
             {error && <div className="error-banner">{error}</div>}
             <button className="primary wide" disabled={loading || !quick.title || !quick.calories} onClick={() => save([{ name: quick.title, grams: 0, ...quick }], quick.title, { source: "quick" })}><Check size={18} /> Add to diary</button>
           </div>}

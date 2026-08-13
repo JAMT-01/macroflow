@@ -60,6 +60,7 @@ export function sumItems(items: MealItem[]) {
     calories: total.calories + item.calories,
     protein: total.protein + item.protein,
     carbs: total.carbs + item.carbs,
+    fiber: total.fiber + (item.fiber ?? 0),
     fat: total.fat + item.fat
-  }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+  }), { calories: 0, protein: 0, carbs: 0, fiber: 0, fat: 0 });
 }

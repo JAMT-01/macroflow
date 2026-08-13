@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS settings (
   protein_target REAL NOT NULL DEFAULT 160,
   carbs_target REAL NOT NULL DEFAULT 230,
   fat_target REAL NOT NULL DEFAULT 70,
+  fiber_target REAL NOT NULL DEFAULT 30,
   weight_kg REAL NOT NULL DEFAULT 75,
   height_cm REAL NOT NULL DEFAULT 175,
   age INTEGER NOT NULL DEFAULT 30,
@@ -45,6 +46,7 @@ CREATE TABLE IF NOT EXISTS foods (
   calories REAL NOT NULL,
   protein REAL NOT NULL,
   carbs REAL NOT NULL,
+  fiber REAL NOT NULL DEFAULT 0,
   fat REAL NOT NULL,
   aliases TEXT NOT NULL DEFAULT '[]',
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -74,6 +76,7 @@ CREATE TABLE IF NOT EXISTS meal_items (
   calories REAL NOT NULL,
   protein REAL NOT NULL,
   carbs REAL NOT NULL,
+  fiber REAL NOT NULL DEFAULT 0,
   fat REAL NOT NULL
 );
 

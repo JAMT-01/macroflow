@@ -17,6 +17,7 @@ export type DbSettings = {
   protein_target: number;
   carbs_target: number;
   fat_target: number;
+  fiber_target: number;
   weight_kg: number;
   height_cm: number;
   age: number;

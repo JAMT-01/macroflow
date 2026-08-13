@@ -30,6 +30,8 @@ export type FoodRow = {
   calories: number;
   protein: number;
   carbs: number;
+  /** Dietary fibre per 100 g. A component of `carbs`, not an addition to it. */
+  fiber: number;
   fat: number;
   aliases: string;
 };
@@ -42,6 +44,7 @@ export type AnalysisItem = {
   calories: number;
   protein: number;
   carbs: number;
+  fiber: number;
   fat: number;
   confidence: number;
   visualEvidence: string;
@@ -78,6 +81,7 @@ export type EstimateRange = {
   calories: { low: number; high: number };
   protein: { low: number; high: number };
   carbs: { low: number; high: number };
+  fiber: { low: number; high: number };
   fat: { low: number; high: number };
 };
 
@@ -108,6 +112,7 @@ export type OpenRouterItem = {
   calories?: number;
   protein?: number;
   carbs?: number;
+  fiber?: number;
   fat?: number;
   confidence?: number;
   visualEvidence?: string;
@@ -186,6 +191,7 @@ export function calculate(food: FoodRow, grams: number, confidence = 0.86, evide
     calories: Math.round(food.calories * factor),
     protein: Math.round(food.protein * factor * 10) / 10,
     carbs: Math.round(food.carbs * factor * 10) / 10,
+    fiber: Math.round((food.fiber ?? 0) * factor * 10) / 10,
     fat: Math.round(food.fat * factor * 10) / 10,
     confidence,
     visualEvidence: evidence?.visualEvidence || "Matched from the meal description.",
@@ -203,21 +209,23 @@ function roundRange(low: number, high: number, precision = 0) {
 
 export function calculateEstimateRange(items: AnalysisItem[]): EstimateRange {
   const totals = {
-    calories: { low: 0, high: 0 }, protein: { low: 0, high: 0 }, carbs: { low: 0, high: 0 }, fat: { low: 0, high: 0 }
+    calories: { low: 0, high: 0 }, protein: { low: 0, high: 0 }, carbs: { low: 0, high: 0 },
+    fiber: { low: 0, high: 0 }, fat: { low: 0, high: 0 }
   };
   for (const item of items) {
     const pointGrams = Math.max(1, item.grams);
     const lowFactor = item.gramsLow / pointGrams;
     const highFactor = item.gramsHigh / pointGrams;
-    for (const nutrient of ["calories", "protein", "carbs", "fat"] as const) {
-      totals[nutrient].low += item[nutrient] * lowFactor;
-      totals[nutrient].high += item[nutrient] * highFactor;
+    for (const nutrient of ["calories", "protein", "carbs", "fiber", "fat"] as const) {
+      totals[nutrient].low += (item[nutrient] ?? 0) * lowFactor;
+      totals[nutrient].high += (item[nutrient] ?? 0) * highFactor;
     }
   }
   return {
     calories: roundRange(totals.calories.low, totals.calories.high),
     protein: roundRange(totals.protein.low, totals.protein.high, 1),
     carbs: roundRange(totals.carbs.low, totals.carbs.high, 1),
+    fiber: roundRange(totals.fiber.low, totals.fiber.high, 1),
     fat: roundRange(totals.fat.low, totals.fat.high, 1)
   };
 }
@@ -324,6 +332,7 @@ Method:
 - ${scaleInstruction} A circle becomes an ellipse under perspective: use that only to make a conservative perspective-aware footprint estimate. Do not pretend one image uniquely reveals food height.
 - Estimate edible grams for every item. Give a realistic low/high gram range; include uncertainty from height, density, overlap, hidden filling, sauce, and absorbed oil. A narrow range is justified only by explicit user quantities.
 - Nutrients are TOTALS for the estimated portion, never per 100 g. Cross-check calories against roughly 4 kcal/g protein, 4 kcal/g carbohydrate, and 9 kcal/g fat.
+- Report dietary fibre for every item. Fibre is a COMPONENT of the carbohydrate figure, not an addition to it: fiber must never exceed carbs, and carbs must not be increased to make room for it. Meat, fish, eggs, dairy, and pure oils are 0 g fibre. Whole grains, legumes, vegetables, fruit with skin, nuts, and seeds carry most of it.
 - If one missing fact could move calories by about 10% or more, ask exactly one short high-impact question. Oil amount, recipe yield, and serving count usually matter more than the oil variety.
 - Assess the photograph honestly. Scale confidence cannot be high if any plate edge is cropped, obscured, or the image is blurry. Define viewAngleDeg as degrees above the plate plane: 90 is directly overhead and 45 is an angled view.
 - Suggest one diary category using Argentine context. The national GAPA pattern has four standard meals: Breakfast/desayuno, Lunch/almuerzo, Merienda, and Dinner/cena. Use Treat only for a standalone discretionary sweet/snack or antojo, not automatically for a normal merienda. Food composition and the user's note are stronger evidence than the clock; local time is a useful prior. Do not add foods merely to make the photo fit a category.
@@ -400,6 +409,8 @@ export function normalizeItem(foods: FoodRow[], item: OpenRouterItem, measuremen
 
   const protein = Math.max(0, Number(item.protein ?? 0));
   const carbs = Math.max(0, Number(item.carbs ?? 0));
+  // Fibre is part of the carbohydrate figure, so it can never exceed it.
+  const fiber = Math.min(carbs, Math.max(0, Number(item.fiber ?? 0)));
   const fat = Math.max(0, Number(item.fat ?? 0));
   const reportedCalories = Math.max(0, Number(item.calories ?? 0));
   const macroCalories = protein * 4 + carbs * 4 + fat * 9;
@@ -412,6 +423,7 @@ export function normalizeItem(foods: FoodRow[], item: OpenRouterItem, measuremen
     calories: Math.round(calories),
     protein: Math.round(protein * 10) / 10,
     carbs: Math.round(carbs * 10) / 10,
+    fiber: Math.round(fiber * 10) / 10,
     fat: Math.round(fat * 10) / 10,
     confidence,
     visualEvidence: item.visualEvidence || "Identified from the visible meal.",
@@ -462,7 +474,7 @@ export const analysisJsonSchema = {
         items: {
           type: "object",
           additionalProperties: false,
-          required: ["name", "grams", "gramsLow", "gramsHigh", "calories", "protein", "carbs", "fat", "confidence", "visualEvidence", "portionBasis", "uncertaintyReasons"],
+          required: ["name", "grams", "gramsLow", "gramsHigh", "calories", "protein", "carbs", "fiber", "fat", "confidence", "visualEvidence", "portionBasis", "uncertaintyReasons"],
           properties: {
             name: { type: "string" },
             grams: { type: "number", minimum: 0 },
@@ -471,6 +483,7 @@ export const analysisJsonSchema = {
             calories: { type: "number", minimum: 0 },
             protein: { type: "number", minimum: 0 },
             carbs: { type: "number", minimum: 0 },
+            fiber: { type: "number", minimum: 0 },
             fat: { type: "number", minimum: 0 },
             confidence: { type: "number", minimum: 0, maximum: 1 },
             visualEvidence: { type: "string" },
@@ -503,10 +516,11 @@ export const refinementJsonSchema = {
         items: {
           type: "object",
           additionalProperties: false,
-          required: ["name", "grams", "calories", "protein", "carbs", "fat", "confidence", "visualEvidence", "portionBasis"],
+          required: ["name", "grams", "calories", "protein", "carbs", "fiber", "fat", "confidence", "visualEvidence", "portionBasis"],
           properties: {
             name: { type: "string" }, grams: { type: "number", minimum: 0 }, calories: { type: "number", minimum: 0 },
-            protein: { type: "number", minimum: 0 }, carbs: { type: "number", minimum: 0 }, fat: { type: "number", minimum: 0 },
+            protein: { type: "number", minimum: 0 }, carbs: { type: "number", minimum: 0 },
+            fiber: { type: "number", minimum: 0 }, fat: { type: "number", minimum: 0 },
             confidence: { type: "number", minimum: 0, maximum: 1 }, visualEvidence: { type: "string" }, portionBasis: { type: "string" }
           }
         }
@@ -519,4 +533,4 @@ export const refinementJsonSchema = {
   }
 } as const;
 
-export const refinementPrompt = `You are refining a meal estimate in a chat with its owner. Update the estimate using the correction. Save a reusable memory only when the user explicitly says to remember it or clearly describes what they always/usually do. A preparation detail stated only for today's meal and portion corrections for this plate must not be remembered. Keep visual evidence distinct from facts supplied by the user.`;
+export const refinementPrompt = `You are refining a meal estimate in a chat with its owner. Update the estimate using the correction. Save a reusable memory only when the user explicitly says to remember it or clearly describes what they always/usually do. A preparation detail stated only for today's meal and portion corrections for this plate must not be remembered. Keep visual evidence distinct from facts supplied by the user. Dietary fibre is a component of the carbohydrate figure and must never exceed it.`;

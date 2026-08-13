@@ -43,12 +43,12 @@ async function todaySummary(env: Env) {
   const range = dateRangeUtc(context.today, settings.timezone);
   const totals = await env.DB.prepare(`
     SELECT COALESCE(SUM(mi.calories),0) calories, COALESCE(SUM(mi.protein),0) protein,
-           COALESCE(SUM(mi.carbs),0) carbs, COALESCE(SUM(mi.fat),0) fat
+           COALESCE(SUM(mi.carbs),0) carbs, COALESCE(SUM(mi.fiber),0) fiber, COALESCE(SUM(mi.fat),0) fat
     FROM meals m JOIN meal_items mi ON mi.meal_id = m.id
     WHERE m.logged_at >= ? AND m.logged_at < ?
-  `).bind(range.start, range.end).first<{ calories: number; protein: number; carbs: number; fat: number }>();
-  const sums = totals ?? { calories: 0, protein: 0, carbs: 0, fat: 0 };
-  return `📊 <b>Today</b>\n${Math.round(sums.calories)} / ${Math.round(settings.calorie_target)} kcal\n🥩 ${Math.round(sums.protein)}g protein · 🌾 ${Math.round(sums.carbs)}g carbs · 🥑 ${Math.round(sums.fat)}g fat\n\n${Math.max(0, Math.round(settings.calorie_target - sums.calories))} kcal remaining`;
+  `).bind(range.start, range.end).first<{ calories: number; protein: number; carbs: number; fiber: number; fat: number }>();
+  const sums = totals ?? { calories: 0, protein: 0, carbs: 0, fiber: 0, fat: 0 };
+  return `📊 <b>Today</b>\n${Math.round(sums.calories)} / ${Math.round(settings.calorie_target)} kcal\n🥩 ${Math.round(sums.protein)}g protein · 🌾 ${Math.round(sums.carbs)}g carbs · 🥑 ${Math.round(sums.fat)}g fat\n🌱 ${Math.round(sums.fiber)} / ${Math.round(settings.fiber_target)}g fibre\n\n${Math.max(0, Math.round(settings.calorie_target - sums.calories))} kcal remaining`;
 }
 
 async function logFromTelegram(env: Env, text: string) {
@@ -62,8 +62,8 @@ async function logFromTelegram(env: Env, text: string) {
     env.DB.prepare("INSERT INTO meals (id, logged_at, meal_type, title, notes, source, confidence) VALUES (?, ?, ?, ?, ?, ?, ?)")
       .bind(mealId, new Date().toISOString(), mealType, analysis.title, description, "telegram", analysis.confidence),
     ...analysis.items.map((item) =>
-      env.DB.prepare("INSERT INTO meal_items (id, meal_id, food_id, name, grams, calories, protein, carbs, fat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-        .bind(crypto.randomUUID(), mealId, item.foodId, item.name, item.grams, item.calories, item.protein, item.carbs, item.fat)
+      env.DB.prepare("INSERT INTO meal_items (id, meal_id, food_id, name, grams, calories, protein, carbs, fiber, fat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        .bind(crypto.randomUUID(), mealId, item.foodId, item.name, item.grams, item.calories, item.protein, item.carbs, item.fiber, item.fat)
     )
   ];
   await env.DB.batch(statements);
