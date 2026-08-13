@@ -1,16 +1,3 @@
-/**
- * Node adapter over the shared analysis core.
- *
- * The deployed app runs on Cloudflare Workers (see worker/). This module now
- * exists so the local research tooling — scripts/test-single-photo-pipeline.ts
- * and the Nutrition5k benchmark — exercises the exact same prompt and maths as
- * production, backed by the local SQLite database instead of D1.
- */
-import fs from "node:fs";
-import path from "node:path";
-import { randomUUID } from "node:crypto";
-import { db, getOpenRouterApiKey, getOpenRouterKeySource, getSettings, rootDir } from "./db.js";
-import { getTimeContext } from "../shared/time.js";
 import {
   analysisJsonSchema,
   analyzeDescription as analyzeDescriptionCore,
@@ -20,8 +7,8 @@ import {
   calibrateAnalysisConfidence,
   clean,
   fallbackMeasurement,
-  matchFood as matchFoodCore,
-  normalizeItem as normalizeItemCore,
+  matchFood,
+  normalizeItem,
   normalizeMealTypeSuggestion,
   normalizeMeasurement,
   normalizeScaleReference,
@@ -37,42 +24,55 @@ import {
   type OpenRouterMeasurement,
   type ScaleReference
 } from "../shared/analysis-core.js";
+import { getTimeContext } from "../shared/time.js";
+import { getOpenRouterApiKey, getOpenRouterKeySource, getPhoto, getSettings, listFoods, photoKey, type Env } from "./db.js";
 
-export { buildSinglePhotoPrompt, calculateEstimateRange, calibrateAnalysisConfidence, suggestArgentineMealType };
-export type {
-  AnalysisItem, CaptureMetadata, EstimateRange, FoodRow, MealAnalysis, MealType,
-  MealTypeSuggestion, MeasurementAssessment, ScaleReference
-} from "../shared/analysis-core.js";
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-const foodRows = () => db.prepare("SELECT * FROM foods ORDER BY name").all() as unknown as FoodRow[];
-
-export const matchFood = (name: string) => matchFoodCore(foodRows(), name);
-
-const normalizeItem = (item: OpenRouterItem, measurement: MeasurementAssessment, allowTightRange: boolean) =>
-  normalizeItemCore(foodRows(), item, measurement, allowTightRange);
-
-function resolveStoredImagePath(relativeImagePath: string) {
-  const normalized = relativeImagePath.replace(/^\/+/, "");
-  if (normalized.startsWith("uploads/") || normalized.startsWith("benchmark/")) return path.join(rootDir, "data", normalized);
-  return path.join(rootDir, normalized);
+function openRouterHeaders(apiKey: string, env: Env) {
+  return {
+    "content-type": "application/json",
+    "authorization": `Bearer ${apiKey}`,
+    "HTTP-Referer": env.APP_URL || "https://macro.montagnertudor.org",
+    "X-OpenRouter-Title": "Macroflow"
+  };
 }
 
-export function analyzeDescription(description: string, options?: { scaleReference?: ScaleReference; localTime?: string }): MealAnalysis {
-  const settings = getSettings();
-  const scaleReference = normalizeScaleReference(options?.scaleReference, settings.plate_diameter_cm);
-  const localTime = options?.localTime || getTimeContext(settings.timezone).localTime;
-  return analyzeDescriptionCore(foodRows(), description, { scaleReference, localTime });
+/**
+ * Base64 for the OpenRouter data URL. The browser already downscales photos to
+ * 1600px / q0.88 before upload, which keeps this inside the 10 ms CPU budget of
+ * the Workers free plan; `nodejs_compat` gives us the native Buffer encoder
+ * rather than a hand-rolled loop.
+ */
+function toBase64(bytes: ArrayBuffer) {
+  return Buffer.from(bytes).toString("base64");
 }
 
-export async function analyzeWithConfiguredProvider(description: string, relativeImagePaths: string[] = [], capture?: CaptureMetadata, requestedReference?: ScaleReference, loggedDate?: string): Promise<MealAnalysis> {
-  const settings = getSettings();
+async function imageContent(env: Env, imagePath: string) {
+  const photo = await getPhoto(env, photoKey(imagePath));
+  if (!photo) return null;
+  return { type: "image_url", image_url: { url: `data:${photo.contentType};base64,${toBase64(photo.bytes)}` } };
+}
+
+export async function analyzeWithConfiguredProvider(
+  env: Env,
+  description: string,
+  imagePath: string | undefined,
+  capture?: CaptureMetadata,
+  requestedReference?: ScaleReference,
+  loggedDate?: string
+): Promise<MealAnalysis> {
+  const settings = await getSettings(env);
+  const foods = await listFoods(env);
   const reference = normalizeScaleReference(requestedReference, settings.plate_diameter_cm);
   const time = getTimeContext(settings.timezone);
   const localTime = loggedDate && loggedDate !== time.today ? "unknown" : time.localTime;
-  const imagePath = relativeImagePaths[0];
-  const apiKey = getOpenRouterApiKey();
+
+  const textOnly = () => analyzeDescriptionCore(foods, description, { scaleReference: reference, localTime });
+
+  const apiKey = await getOpenRouterApiKey(env);
   if (!apiKey) {
-    const result = analyzeDescription(description, { scaleReference: reference, localTime });
+    const result = textOnly();
     if (imagePath) {
       result.imagePath = imagePath;
       result.imagePaths = [imagePath];
@@ -84,25 +84,21 @@ export async function analyzeWithConfiguredProvider(description: string, relativ
   }
 
   try {
-    const content: Array<Record<string, unknown>> = [];
-    const memories = db.prepare("SELECT id, subject, note FROM meal_memories ORDER BY updated_at DESC LIMIT 30").all() as Array<{ id: string; subject: string; note: string }>;
-    content.push({ type: "text", text: buildSinglePhotoPrompt(reference, description, memories, capture, { localTime, timezone: settings.timezone, loggedDate }) });
+    const memoryRows = await env.DB.prepare("SELECT id, subject, note FROM meal_memories ORDER BY updated_at DESC LIMIT 30").all<{ id: string; subject: string; note: string }>();
+    const memories = memoryRows.results ?? [];
+    const content: Array<Record<string, unknown>> = [
+      { type: "text", text: buildSinglePhotoPrompt(reference, description, memories, capture, { localTime, timezone: settings.timezone, loggedDate }) }
+    ];
     if (imagePath) {
-      const absoluteImagePath = resolveStoredImagePath(imagePath);
-      const image = fs.readFileSync(absoluteImagePath).toString("base64");
-      const mime = path.extname(absoluteImagePath).toLowerCase() === ".png" ? "image/png" : "image/jpeg";
-      content.push({ type: "image_url", image_url: { url: `data:${mime};base64,${image}` } });
+      const image = await imageContent(env, imagePath);
+      if (image) content.push(image);
     }
+
     const startedAt = Date.now();
-    const model = process.env.OPENROUTER_MODEL || settings.openrouter_model;
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const model = env.OPENROUTER_MODEL || settings.openrouter_model;
+    const response = await fetch(OPENROUTER_URL, {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "authorization": `Bearer ${apiKey}`,
-        "HTTP-Referer": process.env.APP_URL || "http://localhost:8787",
-        "X-OpenRouter-Title": "Macroflow Local"
-      },
+      headers: openRouterHeaders(apiKey, env),
       body: JSON.stringify({
         model,
         messages: [{ role: "user", content }],
@@ -127,15 +123,21 @@ export async function analyzeWithConfiguredProvider(description: string, relativ
       highImpactQuestion?: string;
       appliedMemoryIds?: string[];
     };
+
     const measurement = normalizeMeasurement(parsed.measurement, reference, capture);
     const mealTypeSuggestion = normalizeMealTypeSuggestion(parsed.mealTypeSuggestion, description, localTime);
     const allowTightRange = /\b\d+(?:[.,]\d+)?\s*(?:g|gr|gram|grams|gramos)\b/i.test(description);
     const items = (parsed.items ?? [])
       .filter((item) => item.name && Number(item.grams) > 0)
-      .map((item) => normalizeItem(item, measurement, allowTightRange));
+      .map((item) => normalizeItem(foods, item, measurement, allowTightRange));
 
     const appliedIds = (parsed.appliedMemoryIds ?? []).filter((id) => memories.some((memory) => memory.id === id));
-    for (const id of appliedIds) db.prepare("UPDATE meal_memories SET times_used = times_used + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(id);
+    if (appliedIds.length) {
+      await env.DB.batch(appliedIds.map((id) =>
+        env.DB.prepare("UPDATE meal_memories SET times_used = times_used + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(id)
+      ));
+    }
+
     return {
       title: parsed.title || items.slice(0, 2).map((item) => item.name).join(" + ") || "Meal scan",
       confidence: calibrateAnalysisConfidence(Number(parsed.confidence ?? 0.6), measurement, appliedIds.length),
@@ -163,7 +165,7 @@ export async function analyzeWithConfiguredProvider(description: string, relativ
       appliedMemories: memories.filter((memory) => appliedIds.includes(memory.id)).map((memory) => `${memory.subject}: ${memory.note}`)
     };
   } catch (error) {
-    const fallback = analyzeDescription(description, { scaleReference: reference, localTime });
+    const fallback = textOnly();
     fallback.imagePath = imagePath;
     fallback.imagePaths = imagePath ? [imagePath] : [];
     fallback.capture = capture;
@@ -173,21 +175,21 @@ export async function analyzeWithConfiguredProvider(description: string, relativ
   }
 }
 
-function rememberMeal(subject: string, note: string) {
-  const existing = db.prepare("SELECT id FROM meal_memories WHERE lower(subject) = lower(?)").get(subject) as { id: string } | undefined;
-  if (existing) db.prepare("UPDATE meal_memories SET note = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(note, existing.id);
-  else db.prepare("INSERT INTO meal_memories (id, subject, note) VALUES (?, ?, ?)").run(randomUUID(), subject, note);
+async function rememberMeal(env: Env, subject: string, note: string) {
+  const existing = await env.DB.prepare("SELECT id FROM meal_memories WHERE lower(subject) = lower(?)").bind(subject).first<{ id: string }>();
+  if (existing) await env.DB.prepare("UPDATE meal_memories SET note = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(note, existing.id).run();
+  else await env.DB.prepare("INSERT INTO meal_memories (id, subject, note) VALUES (?, ?, ?)").bind(crypto.randomUUID(), subject, note).run();
   return `${subject}: ${note}`;
 }
 
-function refineLocally(current: MealAnalysis, message: string, reason?: string): MealAnalysis {
+async function refineLocally(env: Env, foods: FoodRow[], current: MealAnalysis, message: string, reason?: string): Promise<MealAnalysis> {
   const normalized = clean(message);
   let items = [...current.items];
   const mentionsNoOil = /\b(no oil|without oil|sin aceite)\b/.test(normalized);
   const requestedOil = /aceite de girasol|sunflower oil/.test(normalized)
-    ? matchFood("sunflower oil")
+    ? matchFood(foods, "sunflower oil")
     : /aceite de oliva|olive oil/.test(normalized)
-      ? matchFood("olive oil")
+      ? matchFood(foods, "olive oil")
       : undefined;
 
   if (mentionsNoOil) items = items.filter((item) => !/oil|aceite/i.test(item.name));
@@ -200,7 +202,7 @@ function refineLocally(current: MealAnalysis, message: string, reason?: string):
   const repeatable = /\b(remember|save this|from now on|always|usually|normally|siempre|recorda|recuerda|guarda|normalmente|usualmente|suelo)\b/.test(normalized);
   const subject = current.items.find((item) => !/oil|aceite/i.test(item.name))?.name || current.title;
   const note = message.trim().replace(/\s+/g, " ");
-  const memorySaved = repeatable && subject && note ? rememberMeal(subject, note) : undefined;
+  const memorySaved = repeatable && subject && note ? await rememberMeal(env, subject, note) : undefined;
   const assistantReply = memorySaved
     ? `I saved that preparation detail for future meals matching ${subject}.`
     : "I kept this correction on the current estimate. Say “I always…” if you want it saved as a reusable meal memory.";
@@ -215,38 +217,32 @@ function refineLocally(current: MealAnalysis, message: string, reason?: string):
   };
 }
 
-export async function refineAnalysis(current: MealAnalysis, message: string): Promise<MealAnalysis> {
-  const settings = getSettings();
-  const apiKey = getOpenRouterApiKey();
-  if (!apiKey) return refineLocally(current, message, "OpenRouter is not configured, so the local correction parser was used.");
+export async function refineAnalysis(env: Env, current: MealAnalysis, message: string): Promise<MealAnalysis> {
+  const settings = await getSettings(env);
+  const foods = await listFoods(env);
+  const apiKey = await getOpenRouterApiKey(env);
+  if (!apiKey) return refineLocally(env, foods, current, message, "OpenRouter is not configured, so the local correction parser was used.");
+
   try {
-    const existingMemories = db.prepare("SELECT subject, note FROM meal_memories ORDER BY updated_at DESC LIMIT 30").all();
+    const existing = await env.DB.prepare("SELECT subject, note FROM meal_memories ORDER BY updated_at DESC LIMIT 30").all<{ subject: string; note: string }>();
     const content: Array<Record<string, unknown>> = [{
       type: "text",
       text: `${refinementPrompt}
 
 CURRENT ESTIMATE: ${JSON.stringify(current)}
 USER MESSAGE: ${message}
-EXISTING PERSONAL MEMORIES: ${JSON.stringify(existingMemories)}`
+EXISTING PERSONAL MEMORIES: ${JSON.stringify(existing.results ?? [])}`
     }];
     for (const relativeImagePath of current.imagePaths?.length ? current.imagePaths : current.imagePath ? [current.imagePath] : []) {
-      const absoluteImagePath = resolveStoredImagePath(relativeImagePath);
-      if (fs.existsSync(absoluteImagePath)) {
-        const image = fs.readFileSync(absoluteImagePath).toString("base64");
-        const mime = path.extname(absoluteImagePath).toLowerCase() === ".png" ? "image/png" : "image/jpeg";
-        content.push({ type: "image_url", image_url: { url: `data:${mime};base64,${image}` } });
-      }
+      const image = await imageContent(env, relativeImagePath);
+      if (image) content.push(image);
     }
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+
+    const response = await fetch(OPENROUTER_URL, {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "authorization": `Bearer ${apiKey}`,
-        "HTTP-Referer": process.env.APP_URL || "http://localhost:5173",
-        "X-OpenRouter-Title": "Macroflow Local"
-      },
+      headers: openRouterHeaders(apiKey, env),
       body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL || settings.openrouter_model,
+        model: env.OPENROUTER_MODEL || settings.openrouter_model,
         messages: [{ role: "user", content }],
         temperature: 0.1,
         max_tokens: 1800,
@@ -261,14 +257,16 @@ EXISTING PERSONAL MEMORIES: ${JSON.stringify(existingMemories)}`
       title: string; confidence: number; items: OpenRouterItem[]; assumptions: string[]; warnings: string[]; assistantReply: string;
       shouldRemember: boolean; memory: { subject: string; note: string };
     };
+
     const fallbackReference = normalizeScaleReference(undefined, settings.plate_diameter_cm);
-    const measurement = current.measurement ?? fallbackMeasurement(fallbackReference, current.capture);
+    const measurement: MeasurementAssessment = current.measurement ?? fallbackMeasurement(fallbackReference, current.capture);
     const explicitQuantity = /\b\d+(?:[.,]\d+)?\s*(?:g|gr|gram|grams|gramos)\b/i.test(message);
-    const items = parsed.items.filter((item) => item.name && item.grams).map((item) => normalizeItem(item, measurement, explicitQuantity));
+    const items = parsed.items.filter((item) => item.name && item.grams).map((item) => normalizeItem(foods, item, measurement, explicitQuantity));
     let memorySaved: string | undefined;
-    if (parsed.shouldRemember && parsed.memory.subject.trim() && parsed.memory.note.trim()) {
-      memorySaved = rememberMeal(parsed.memory.subject, parsed.memory.note);
+    if (parsed.shouldRemember && parsed.memory?.subject?.trim() && parsed.memory?.note?.trim()) {
+      memorySaved = await rememberMeal(env, parsed.memory.subject, parsed.memory.note);
     }
+
     return {
       title: parsed.title, confidence: parsed.confidence, provider: "openrouter",
       imagePath: current.imagePath, imagePaths: current.imagePaths, items,
@@ -281,18 +279,27 @@ EXISTING PERSONAL MEMORIES: ${JSON.stringify(existingMemories)}`
       appliedMemories: current.appliedMemories, memorySaved
     };
   } catch (error) {
-    return refineLocally(current, message, `OpenRouter refinement failed (${error instanceof Error ? error.message : "unknown error"}), so the local correction parser was used.`);
+    return refineLocally(env, foods, current, message, `OpenRouter refinement failed (${error instanceof Error ? error.message : "unknown error"}), so the local correction parser was used.`);
   }
 }
 
-export async function getAiStatus() {
-  const settings = getSettings();
-  const keySource = getOpenRouterKeySource();
+export async function getAiStatus(env: Env) {
+  const settings = await getSettings(env);
+  const keySource = await getOpenRouterKeySource(env);
   return {
     provider: "openrouter",
     available: keySource !== "none",
-    model: process.env.OPENROUTER_MODEL || settings.openrouter_model,
+    model: env.OPENROUTER_MODEL || settings.openrouter_model,
     configuredFromEnvironment: keySource === "environment",
     keySource
   };
+}
+
+export async function analyzeTextOnly(env: Env, description: string) {
+  const settings = await getSettings(env);
+  const foods = await listFoods(env);
+  return analyzeDescriptionCore(foods, description, {
+    scaleReference: normalizeScaleReference(undefined, settings.plate_diameter_cm),
+    localTime: getTimeContext(settings.timezone).localTime
+  });
 }

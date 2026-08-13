@@ -1,0 +1,51 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "macroflow",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-08-13",
+  // nodejs_compat gives the Worker a native Buffer, used to base64 the meal
+  // photo for OpenRouter inside the free plan's 10 ms CPU budget.
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application",
+    // The Worker owns /api/* and /uploads/*; everything else is the built SPA.
+    "run_worker_first": ["/api/*", "/uploads/*"]
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "macroflow",
+      // Replaced by `wrangler d1 create macroflow` — see README.
+      "database_id": "PLACEHOLDER_RUN_WRANGLER_D1_CREATE",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  "kv_namespaces": [
+    {
+      "binding": "PHOTOS",
+      // Replaced by `wrangler kv namespace create PHOTOS` — see README.
+      "id": "PLACEHOLDER_RUN_WRANGLER_KV_CREATE"
+    }
+  ],
+
+  "triggers": {
+    // Reminders are minute-accurate in the diary timezone, so the cron runs every minute.
+    "crons": ["* * * * *"]
+  },
+
+  "vars": {
+    "APP_URL": "https://macro.montagnertudor.org"
+  },
+
+  "routes": [
+    {
+      "pattern": "macro.montagnertudor.org",
+      "custom_domain": true
+    }
+  ]
+}

@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { seedFoods } from "./seed.js";
+import { seedFoods } from "../shared/seed.js";
 
 const serverDir = path.dirname(fileURLToPath(import.meta.url));
 export const rootDir = path.resolve(serverDir, "..");

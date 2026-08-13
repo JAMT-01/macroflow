@@ -1,8 +1,11 @@
 node_modules/
 dist/
+.wrangler/
+tmp/
 data/*.db
 data/*.db-*
 data/uploads/*
 !data/uploads/.gitkeep
 .env
+.dev.vars
 *.log

@@ -1,0 +1,13 @@
+# Copy to .dev.vars for `wrangler dev`. In production these are Worker secrets,
+# set with `wrangler secret put NAME` — never committed.
+
+# Create an API key at https://openrouter.ai/settings/keys
+OPENROUTER_API_KEY=
+
+# Best accuracy/cost balance in the bundled one-photo pilot. Any OpenRouter
+# vision model that supports structured outputs works.
+OPENROUTER_MODEL=google/gemini-3.6-flash
+
+# Shared secret Telegram sends back in x-telegram-bot-api-secret-token so the
+# webhook cannot be spoofed. Generate one with: openssl rand -hex 32
+TELEGRAM_WEBHOOK_SECRET=
