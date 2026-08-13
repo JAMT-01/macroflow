@@ -19,8 +19,7 @@
     {
       "binding": "DB",
       "database_name": "macroflow",
-      // Replaced by `wrangler d1 create macroflow` — see README.
-      "database_id": "PLACEHOLDER_RUN_WRANGLER_D1_CREATE",
+      "database_id": "978a69cc-f981-4fa8-a136-c67b556bb643",
       "migrations_dir": "migrations"
     }
   ],
@@ -28,8 +27,7 @@
   "kv_namespaces": [
     {
       "binding": "PHOTOS",
-      // Replaced by `wrangler kv namespace create PHOTOS` — see README.
-      "id": "PLACEHOLDER_RUN_WRANGLER_KV_CREATE"
+      "id": "cafdcdcb096c4b23b5978317a08a0fa1"
     }
   ],
 
