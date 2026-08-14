@@ -106,7 +106,7 @@ export async function clearFailures(env: Env, ip: string) {
 
 export function loginPage(options: { error?: string; configured: boolean } = { configured: true }) {
   const message = !options.configured
-    ? `<p class="notice">No passphrase is set on this Worker yet. Run <code>wrangler secret put APP_PASSWORD</code> and deploy again.</p>`
+    ? `<p class="notice">No passphrase is set on this Worker yet. Run <code>npx wrangler secret put APP_PASSWORD</code> in the project folder. It takes effect immediately &mdash; no redeploy needed.</p>`
     : options.error
       ? `<p class="error">${options.error}</p>`
       : "";

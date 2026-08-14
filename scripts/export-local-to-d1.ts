@@ -79,7 +79,8 @@ const script = [
   ...photos.map((file) => {
     const contentType = /\.png$/i.test(file) ? "image/png" : "image/jpeg";
     const source = path.posix.join("data", "uploads", file);
-    return `wrangler kv key put "uploads/${file}" --path "${source}" --binding PHOTOS --remote --metadata '{"contentType":"${contentType}"}'`;
+    // npx, because wrangler is a local devDependency and is not on PATH.
+    return `npx wrangler kv key put "uploads/${file}" --path "${source}" --binding PHOTOS --remote --metadata '{"contentType":"${contentType}"}'`;
   })
 ].join("\n");
 fs.writeFileSync(path.join(kvDir, "upload.sh"), `${script}\n`);

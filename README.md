@@ -43,7 +43,7 @@ Everything is behind a passphrase login (see below). The Worker runs before the 
 
 ## Deploy
 
-Every step is CLI. Wrangler opens a browser once for you to approve the login.
+Every step is CLI. Wrangler is a local devDependency rather than a global install, so each command needs the `npx` prefix — a bare `wrangler …` will fail with "not recognized". Wrangler opens a browser once for you to approve the login.
 
 ```bash
 pnpm install
@@ -92,7 +92,7 @@ pnpm deploy
 npx wrangler deployments list
 ```
 
-**6. Bring your existing diary across** (optional — skip for a fresh start). This reads `data/macroflow.db`, writes `tmp/d1-import.sql`, and generates one `wrangler kv key put` command per meal photo.
+**6. Bring your existing diary across** (optional — skip for a fresh start). This reads `data/macroflow.db`, writes `tmp/d1-import.sql`, and generates one `npx wrangler kv key put` command per meal photo.
 
 ```bash
 pnpm d1:export-local
