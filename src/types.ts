@@ -151,6 +151,16 @@ export type Analysis = {
 /** A previously quick-added entry, offered for one-tap repeat logging. */
 export type QuickAdd = Nutrients & { name: string; grams: number; timesUsed: number; lastLoggedAt: string };
 
+/** One entry in the record of every food you have logged, for repeating. */
+export type LoggedFood = Nutrients & {
+  name: string;
+  grams: number;
+  foodId: number | null;
+  timesUsed: number;
+  lastLoggedAt: string;
+  firstLoggedAt: string;
+};
+
 export type MealMemory = { id: string; subject: string; note: string; timesUsed: number; createdAt: string; updatedAt: string };
 
 export type HistoryDay = Nutrients & { date: string; meals: number };

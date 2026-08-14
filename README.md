@@ -11,7 +11,8 @@ Macroflow is a personal macro tracker built for an iPhone camera, running entire
 - Chat corrections such as “I always bake this milanesa with sunflower oil”
 - Persistent meal memories reused by future OpenRouter analyses when relevant
 - Manual food search, direct macro entry, repeat meal, and delete
-- Quick add remembers everything you have logged before, for one-tap repeats
+- **My foods**: the full searchable record of everything you have logged, to repeat any of it
+- Quick add remembers your recent entries for one-tap repeats
 - Automatic Argentine meal category: desayuno, almuerzo, merienda, cena or antojo
 - Daily calories, protein, carbs, fat and **fibre**, 30-day progress, and weight check-ins
 - Telegram reminders, daily totals, and `/log` text logging
@@ -179,6 +180,14 @@ The plate is only useful when the complete outer rim is in frame, so every scan 
 - **No size reference** — for a different plate, a bowl, a pan, a wrapper, or a cropped rim. The model is told not to convert pixels to centimetres at all and falls back to familiar serving sizes with a wider uncertainty range.
 
 Whatever you pick, the review screen reports whether the plate was actually used as scale, and confidence is capped when it was not.
+
+## My foods
+
+Every food you log is kept, whatever route it arrived by — photo analysis, catalogue search, or quick add. **Log a meal → My foods** is the whole record: searchable, ordered by how often you have eaten each one, showing the portion, the calories, how many times you have logged it, and since when.
+
+Tapping an entry puts it on a plate you can build up and adjust before saving, exactly like the food catalogue. Portions rescale proportionally, so pulling in a 200 g milanesa and changing it to 150 g scales the macros with it. Entries recorded without a weight — hand-typed quick adds — carry totals rather than a rate, so those cannot rescale; edit the numbers instead.
+
+This is deliberately separate from the short **Add again** list inside Quick add, which is only the handful of things you logged most recently.
 
 ## Fibre
 

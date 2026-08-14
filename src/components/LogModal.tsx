@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Brain, Camera, Check, Eye, History, ImagePlus, Info, LoaderCircle, Plus, Ruler, Search, Send, Sparkles, Trash2, Utensils, X, Zap } from "lucide-react";
+import { ArrowLeft, BookMarked, Brain, Camera, Check, Eye, History, ImagePlus, Info, LoaderCircle, Plus, Ruler, Search, Send, Sparkles, Trash2, Utensils, X, Zap } from "lucide-react";
 import { api, sumItems } from "../api";
 import { prepareMealPhoto } from "../imageCapture";
 import { guessMealTypeFromLocalTime, mealTypeMeta, mealTypes } from "../mealTypes";
-import type { Analysis, CaptureMetadata, Food, MealItem, MealTypeChoice, QuickAdd, ScaleReference, Settings } from "../types";
+import type { Analysis, CaptureMetadata, Food, LoggedFood, MealItem, MealTypeChoice, QuickAdd, ScaleReference, Settings } from "../types";
 
-type Mode = "scan" | "search" | "quick";
+type Mode = "scan" | "search" | "quick" | "mine";
 
 export function LogModal({ defaultMealType, date, settings, onClose, onSaved }: { defaultMealType: MealTypeChoice; date: string; settings: Settings; onClose: () => void; onSaved: () => void }) {
   const [mode, setMode] = useState<Mode>("scan");
@@ -27,6 +27,8 @@ export function LogModal({ defaultMealType, date, settings, onClose, onSaved }: 
   const [selected, setSelected] = useState<MealItem[]>([]);
   const [quick, setQuick] = useState({ title: "", calories: 0, protein: 0, carbs: 0, fiber: 0, fat: 0 });
   const [quickAdds, setQuickAdds] = useState<QuickAdd[]>([]);
+  const [myFoods, setMyFoods] = useState<LoggedFood[]>([]);
+  const [myQuery, setMyQuery] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
 
   const scaleReference: ScaleReference = scaleMode === "none"
@@ -49,6 +51,11 @@ export function LogModal({ defaultMealType, date, settings, onClose, onSaved }: 
     if (mode !== "quick") return;
     api.quickAdds().then(setQuickAdds).catch(() => setQuickAdds([]));
   }, [mode]);
+  useEffect(() => {
+    if (mode !== "mine") return;
+    const timeout = setTimeout(() => api.myFoods(myQuery).then(setMyFoods).catch(() => setMyFoods([])), 150);
+    return () => clearTimeout(timeout);
+  }, [mode, myQuery]);
 
   async function chooseImage(file: File | undefined) {
     if (!file) return;
@@ -113,6 +120,13 @@ export function LogModal({ defaultMealType, date, settings, onClose, onSaved }: 
     setSelected((items) => [...items, { foodId: food.id, name: food.name, emoji: food.emoji, grams, calories: food.calories * factor, protein: food.protein * factor, carbs: food.carbs * factor, fiber: (food.fiber ?? 0) * factor, fat: food.fat * factor }]);
   }
 
+  function addLoggedFood(entry: LoggedFood) {
+    setSelected((items) => [...items, {
+      foodId: entry.foodId, name: entry.name, emoji: "🍽️", grams: entry.grams,
+      calories: entry.calories, protein: entry.protein, carbs: entry.carbs, fiber: entry.fiber, fat: entry.fat
+    }]);
+  }
+
   function updateSelectedGrams(index: number, grams: number) {
     setSelected((items) => items.map((item, itemIndex) => {
       if (itemIndex !== index) return item;
@@ -137,7 +151,7 @@ export function LogModal({ defaultMealType, date, settings, onClose, onSaved }: 
       <div className="log-modal">
         <header className="log-header"><button className="icon-button" onClick={analysis ? () => setAnalysis(null) : onClose}>{analysis ? <ArrowLeft /> : <X />}</button><div><span>LOG A MEAL</span><strong>{analysis ? "Review estimate" : "Add to your diary"}</strong></div><select value={mealType} onChange={(e) => setMealType(e.target.value as MealTypeChoice)}><option value="Auto">Auto → {autoMealType}</option>{mealTypes.map((type) => <option key={type} value={type}>{mealTypeMeta[type].emoji} {type} · {mealTypeMeta[type].hint}</option>)}</select></header>
 
-        {!analysis && <div className="log-tabs"><button className={mode === "scan" ? "active" : ""} onClick={() => setMode("scan")}><Sparkles size={17} /> AI scan</button><button className={mode === "search" ? "active" : ""} onClick={() => setMode("search")}><Search size={17} /> Search</button><button className={mode === "quick" ? "active" : ""} onClick={() => setMode("quick")}><Zap size={17} /> Quick add</button></div>}
+        {!analysis && <div className="log-tabs"><button className={mode === "scan" ? "active" : ""} onClick={() => setMode("scan")}><Sparkles size={17} /> AI scan</button><button className={mode === "search" ? "active" : ""} onClick={() => setMode("search")}><Search size={17} /> Search</button><button className={mode === "quick" ? "active" : ""} onClick={() => setMode("quick")}><Zap size={17} /> Quick add</button><button className={mode === "mine" ? "active" : ""} onClick={() => setMode("mine")}><BookMarked size={17} /> My foods</button></div>}
 
         <div className="log-body">
           {!analysis && mode === "scan" && <div className="scan-flow">
@@ -195,6 +209,21 @@ export function LogModal({ defaultMealType, date, settings, onClose, onSaved }: 
             <div className="food-results"><p className="eyebrow">{query ? "RESULTS" : "POPULAR FOODS"}</p>{foods.map((food) => <button className="food-result" key={food.id} onClick={() => addFood(food)}><span className="food-emoji">{food.emoji}</span><div><strong>{food.name}</strong><p>{food.servingLabel} · {food.servingGrams}g</p></div><div><strong>{Math.round(food.calories * food.servingGrams / 100)}</strong><span>kcal</span></div><Plus size={18} /></button>)}</div>
             {error && <div className="error-banner">{error}</div>}
             {selected.length > 0 && <button className="primary wide sticky-save" disabled={loading} onClick={() => save(selected, selected.length === 1 ? selected[0].name : `${selected[0].name.split(",")[0]} + ${selected.length - 1} more`, { source: "search" })}><Check size={18} /> Log {Math.round(selectedTotals.calories)} kcal</button>}
+          </div>}
+
+          {!analysis && mode === "mine" && <div className="search-flow">
+            <div className="search-box"><Search /><input autoFocus placeholder="Search your foods…" value={myQuery} onChange={(e) => setMyQuery(e.target.value)} /></div>
+            {selected.length > 0 && <div className="selected-foods"><div className="review-title"><h3>Your plate</h3><strong>{Math.round(selectedTotals.calories)} kcal</strong></div>{selected.map((item, index) => <div className="selected-row" key={`${item.name}-${index}`}><span>{item.emoji}</span><div><strong>{item.name}</strong><small>{Math.round(item.calories)} kcal</small></div><label><input type="number" value={Math.round(item.grams)} onChange={(e) => updateSelectedGrams(index, +e.target.value)} /><span>g</span></label><button onClick={() => setSelected(selected.filter((_, i) => i !== index))}><X size={16} /></button></div>)}</div>}
+            <div className="food-results"><p className="eyebrow">{myQuery ? "MATCHES" : `YOUR FOOD RECORD · ${myFoods.length}`}</p>
+              {myFoods.map((entry) => <button className="food-result logged-food" key={entry.name} onClick={() => addLoggedFood(entry)}>
+                <span className="food-emoji">🍽️</span>
+                <div><strong>{entry.name}</strong><p>{entry.grams > 0 ? `${Math.round(entry.grams)}g · ` : ""}logged {entry.timesUsed}×{entry.timesUsed > 1 ? ` · since ${new Date(entry.firstLoggedAt).toLocaleDateString()}` : ` · ${new Date(entry.lastLoggedAt).toLocaleDateString()}`}</p></div>
+                <div><strong>{Math.round(entry.calories)}</strong><span>kcal</span></div><Plus size={18} />
+              </button>)}
+              {!myFoods.length && <div className="empty-memory"><BookMarked /><strong>{myQuery ? "Nothing matches that" : "No foods recorded yet"}</strong><p>{myQuery ? "Try a shorter search." : "Every food you log is kept here so you can repeat it later."}</p></div>}
+            </div>
+            {error && <div className="error-banner">{error}</div>}
+            {selected.length > 0 && <button className="primary wide sticky-save" disabled={loading} onClick={() => save(selected, selected.length === 1 ? selected[0].name : `${selected[0].name.split(",")[0]} + ${selected.length - 1} more`, { source: "repeat" })}><Check size={18} /> Log {Math.round(selectedTotals.calories)} kcal</button>}
           </div>}
 
           {!analysis && mode === "quick" && <div className="quick-flow">

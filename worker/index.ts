@@ -380,6 +380,28 @@ app.get("/api/quick-adds", async (c) => {
   return c.json(rows.results ?? []);
 });
 
+/**
+ * The complete record of every food you have logged, searchable, ordered by how
+ * often you have eaten it. Distinct from /api/quick-adds, which is a short
+ * recency list: this is the full library you repeat from.
+ */
+app.get("/api/my-foods", async (c) => {
+  const query = (c.req.query("q") || "").trim();
+  const filter = query ? "WHERE lower(mi.name) LIKE ?" : "";
+  const statement = c.env.DB.prepare(`
+    SELECT mi.name, mi.calories, mi.protein, mi.carbs, mi.fiber, mi.fat, mi.grams,
+           mi.food_id AS foodId, COUNT(*) AS timesUsed, MAX(m.logged_at) AS lastLoggedAt,
+           MIN(m.logged_at) AS firstLoggedAt
+    FROM meals m JOIN meal_items mi ON mi.meal_id = m.id
+    ${filter}
+    GROUP BY lower(mi.name)
+    ORDER BY timesUsed DESC, lastLoggedAt DESC
+    LIMIT 300
+  `);
+  const rows = await (query ? statement.bind(`%${query.toLowerCase()}%`) : statement).all<Record<string, unknown>>();
+  return c.json(rows.results ?? []);
+});
+
 app.get("/api/memories", async (c) => {
   const rows = await c.env.DB.prepare(
     "SELECT id, subject, note, times_used timesUsed, created_at createdAt, updated_at updatedAt FROM meal_memories ORDER BY updated_at DESC"

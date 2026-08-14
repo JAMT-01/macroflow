@@ -1,4 +1,4 @@
-import type { Analysis, BenchmarkCase, BenchmarkResearch, BenchmarkRun, CaptureMetadata, Dashboard, Food, History, MealItem, MealMemory, MealType, QuickAdd, ScaleReference, Settings, VisionModel } from "./types";
+import type { Analysis, BenchmarkCase, BenchmarkResearch, BenchmarkRun, CaptureMetadata, Dashboard, Food, History, MealItem, LoggedFood, MealMemory, MealType, QuickAdd, ScaleReference, Settings, VisionModel } from "./types";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
@@ -37,6 +37,7 @@ export const api = {
   }),
   memories: () => request<MealMemory[]>("/api/memories"),
   quickAdds: () => request<QuickAdd[]>("/api/quick-adds"),
+  myFoods: (query = "") => request<LoggedFood[]>(`/api/my-foods?q=${encodeURIComponent(query)}`),
   deleteMemory: (id: string) => request<void>(`/api/memories/${id}`, { method: "DELETE" }),
   createMeal: (data: { loggedAt?: string; loggedDate?: string; mealType: MealType; title: string; imagePath?: string; imagePaths?: string[]; notes?: string; source?: string; confidence?: number; items: MealItem[] }) =>
     request<{ id: string }>("/api/meals", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(data) }),
