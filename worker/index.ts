@@ -358,23 +358,24 @@ app.post("/api/analyze/refine", async (c) => {
 app.get("/api/ai/status", async (c) => c.json(await getAiStatus(c.env)));
 
 /**
- * Distinct quick-add entries, most recently used first, so repeat entries can be
- * re-logged with one tap instead of retyping the macros.
+ * Distinct foods you have logged before, most recent first, so a repeat can be
+ * re-logged with one tap instead of retyping the macros. Everything counts —
+ * photo analyses and searches as well as previous quick adds — because the
+ * things worth repeating are rarely the ones that happened to be typed by hand.
  *
  * Derived from the meals themselves rather than a separate table, so deleting a
- * meal removes it from the list and edited numbers are always the latest ones.
- * The bare columns alongside MAX(logged_at) are not arbitrary: SQLite guarantees
- * they come from the row that produced the maximum.
+ * meal removes it from the list and the numbers shown are always the latest you
+ * saved under that name. The bare columns alongside MAX(logged_at) are not
+ * arbitrary: SQLite takes them from the row that produced the maximum.
  */
 app.get("/api/quick-adds", async (c) => {
   const rows = await c.env.DB.prepare(`
-    SELECT mi.name, mi.calories, mi.protein, mi.carbs, mi.fiber, mi.fat,
+    SELECT mi.name, mi.calories, mi.protein, mi.carbs, mi.fiber, mi.fat, mi.grams,
            COUNT(*) AS timesUsed, MAX(m.logged_at) AS lastLoggedAt
     FROM meals m JOIN meal_items mi ON mi.meal_id = m.id
-    WHERE m.source = 'quick'
     GROUP BY lower(mi.name)
     ORDER BY lastLoggedAt DESC
-    LIMIT 15
+    LIMIT 20
   `).all<Record<string, unknown>>();
   return c.json(rows.results ?? []);
 });

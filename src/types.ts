@@ -149,7 +149,7 @@ export type Analysis = {
 };
 
 /** A previously quick-added entry, offered for one-tap repeat logging. */
-export type QuickAdd = Nutrients & { name: string; timesUsed: number; lastLoggedAt: string };
+export type QuickAdd = Nutrients & { name: string; grams: number; timesUsed: number; lastLoggedAt: string };
 
 export type MealMemory = { id: string; subject: string; note: string; timesUsed: number; createdAt: string; updatedAt: string };
 

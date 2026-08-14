@@ -200,9 +200,9 @@ export function LogModal({ defaultMealType, date, settings, onClose, onSaved }: 
           {!analysis && mode === "quick" && <div className="quick-flow">
             <div className="quick-icon"><Utensils /></div><h2>Already know the numbers?</h2><p className="muted">Add totals directly without searching for individual foods.</p>
             {quickAdds.length > 0 && <div className="quick-recents">
-              <div className="review-title"><h3><History size={16} /> Add again</h3><span>Tap to fill the form</span></div>
+              <div className="review-title"><h3><History size={16} /> Add again</h3><span>Anything you have logged before</span></div>
               <div className="quick-recent-list">{quickAdds.map((entry) => <button type="button" key={entry.name} className={quick.title === entry.name ? "active" : ""} onClick={() => setQuick({ title: entry.name, calories: entry.calories, protein: entry.protein, carbs: entry.carbs, fiber: entry.fiber ?? 0, fat: entry.fat })}>
-                <div><strong>{entry.name}</strong><small>P {Math.round(entry.protein)} · C {Math.round(entry.carbs)} · F {Math.round(entry.fat)} · Fib {Math.round(entry.fiber ?? 0)}</small></div>
+                <div><strong>{entry.name}</strong><small>{entry.grams > 0 ? `${Math.round(entry.grams)} g · ` : ""}P {Math.round(entry.protein)} · C {Math.round(entry.carbs)} · F {Math.round(entry.fat)} · Fib {Math.round(entry.fiber ?? 0)}</small></div>
                 <div className="quick-recent-meta"><strong>{Math.round(entry.calories)}</strong><small>kcal{entry.timesUsed > 1 ? ` · ×${entry.timesUsed}` : ""}</small></div>
               </button>)}</div>
             </div>}
