@@ -68,17 +68,29 @@ pnpm d1:migrate
 
 **3. Add your secrets.** Each command prompts for the value; nothing is written to the repo.
 
+Because this Worker is deployed as **versions**, plain `wrangler secret put` fails with *"the latest version of your Worker isn't currently deployed"*. Use the versioned form, which prints a new version id:
+
 ```bash
-npx wrangler secret put APP_PASSWORD
+npx wrangler versions secret put APP_PASSWORD
+```
+
+Then roll that version out — `--yes` alone is not enough, the id is required:
+
+```bash
+npx wrangler versions deploy <version-id-printed-above>@100% --yes
+```
+
+Repeat for the other two secrets (you can set both, then deploy once):
+
+```bash
+npx wrangler versions secret put OPENROUTER_API_KEY
 ```
 
 ```bash
-npx wrangler secret put OPENROUTER_API_KEY
+npx wrangler versions secret put TELEGRAM_WEBHOOK_SECRET
 ```
 
-```bash
-npx wrangler secret put TELEGRAM_WEBHOOK_SECRET
-```
+The dashboard is a fine alternative: **Workers & Pages → macroflow → Settings → Variables and Secrets**, which deploys on save.
 
 **4. Build and deploy.**
 
@@ -104,11 +116,7 @@ npx wrangler d1 execute macroflow --remote --file tmp/d1-import.sql
 
 Then run the commands in `tmp/kv-photos/upload.sh` to push the photos into KV.
 
-**7. Set the login passphrase.** Until this exists the Worker fails closed: every page returns the login screen and every API call returns 503, so the diary is never public while unconfigured.
-
-```bash
-npx wrangler secret put APP_PASSWORD
-```
+**7. Set the login passphrase** (step 3 above, if you skipped it). Until it exists the Worker fails closed: every page returns the login screen and every API call returns 503, so the diary is never public while unconfigured.
 
 **8. Connect Telegram** (optional). After saving the bot token in Settings, register the webhook — Workers cannot long-poll, so Telegram pushes updates instead:
 
@@ -150,7 +158,7 @@ One passphrase, stored only as the `APP_PASSWORD` Worker secret. Signing in sets
 - With no `APP_PASSWORD` set, the Worker fails closed rather than open.
 - Sign out from **Settings → Sign out**. An expired session makes the app reload straight to the login screen.
 
-To change the passphrase, run `wrangler secret put APP_PASSWORD` again — no redeploy needed.
+To change the passphrase, run `npx wrangler versions secret put APP_PASSWORD` and deploy the version it prints. Every signed-in device is signed out, because the session signing key is derived from the passphrase.
 
 If you would rather use a real identity provider with MFA, Cloudflare Access (free up to 50 users) can sit in front of the same Worker: **Zero Trust → Access → Applications → Add a self-hosted app** for `macro.montagnertudor.org`. The passphrase gate keeps working underneath it.
 
