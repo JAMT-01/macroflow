@@ -11,6 +11,7 @@ Macroflow is a personal macro tracker built for an iPhone camera, running entire
 - Chat corrections such as “I always bake this milanesa with sunflower oil”
 - Persistent meal memories reused by future OpenRouter analyses when relevant
 - Manual food search, direct macro entry, repeat meal, and delete
+- Quick add remembers what you have entered before, for one-tap repeats
 - Automatic Argentine meal category: desayuno, almuerzo, merienda, cena or antojo
 - Daily calories, protein, carbs, fat and **fibre**, 30-day progress, and weight check-ins
 - Telegram reminders, daily totals, and `/log` text logging

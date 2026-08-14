@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Brain, Camera, Check, Eye, ImagePlus, Info, LoaderCircle, Plus, Ruler, Search, Send, Sparkles, Trash2, Utensils, X, Zap } from "lucide-react";
+import { ArrowLeft, Brain, Camera, Check, Eye, History, ImagePlus, Info, LoaderCircle, Plus, Ruler, Search, Send, Sparkles, Trash2, Utensils, X, Zap } from "lucide-react";
 import { api, sumItems } from "../api";
 import { prepareMealPhoto } from "../imageCapture";
 import { guessMealTypeFromLocalTime, mealTypeMeta, mealTypes } from "../mealTypes";
-import type { Analysis, CaptureMetadata, Food, MealItem, MealTypeChoice, ScaleReference, Settings } from "../types";
+import type { Analysis, CaptureMetadata, Food, MealItem, MealTypeChoice, QuickAdd, ScaleReference, Settings } from "../types";
 
 type Mode = "scan" | "search" | "quick";
 
@@ -26,6 +26,7 @@ export function LogModal({ defaultMealType, date, settings, onClose, onSaved }: 
   const [foods, setFoods] = useState<Food[]>([]);
   const [selected, setSelected] = useState<MealItem[]>([]);
   const [quick, setQuick] = useState({ title: "", calories: 0, protein: 0, carbs: 0, fiber: 0, fat: 0 });
+  const [quickAdds, setQuickAdds] = useState<QuickAdd[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const scaleReference: ScaleReference = scaleMode === "none"
@@ -44,6 +45,10 @@ export function LogModal({ defaultMealType, date, settings, onClose, onSaved }: 
     const timeout = setTimeout(() => api.foods(query).then(setFoods), 150);
     return () => clearTimeout(timeout);
   }, [mode, query]);
+  useEffect(() => {
+    if (mode !== "quick") return;
+    api.quickAdds().then(setQuickAdds).catch(() => setQuickAdds([]));
+  }, [mode]);
 
   async function chooseImage(file: File | undefined) {
     if (!file) return;
@@ -194,6 +199,13 @@ export function LogModal({ defaultMealType, date, settings, onClose, onSaved }: 
 
           {!analysis && mode === "quick" && <div className="quick-flow">
             <div className="quick-icon"><Utensils /></div><h2>Already know the numbers?</h2><p className="muted">Add totals directly without searching for individual foods.</p>
+            {quickAdds.length > 0 && <div className="quick-recents">
+              <div className="review-title"><h3><History size={16} /> Add again</h3><span>Tap to fill the form</span></div>
+              <div className="quick-recent-list">{quickAdds.map((entry) => <button type="button" key={entry.name} className={quick.title === entry.name ? "active" : ""} onClick={() => setQuick({ title: entry.name, calories: entry.calories, protein: entry.protein, carbs: entry.carbs, fiber: entry.fiber ?? 0, fat: entry.fat })}>
+                <div><strong>{entry.name}</strong><small>P {Math.round(entry.protein)} · C {Math.round(entry.carbs)} · F {Math.round(entry.fat)} · Fib {Math.round(entry.fiber ?? 0)}</small></div>
+                <div className="quick-recent-meta"><strong>{Math.round(entry.calories)}</strong><small>kcal{entry.timesUsed > 1 ? ` · ×${entry.timesUsed}` : ""}</small></div>
+              </button>)}</div>
+            </div>}
             <label className="field"><span>Meal name</span><input placeholder="Post-workout shake" value={quick.title} onChange={(e) => setQuick({ ...quick, title: e.target.value })} /></label>
             <div className="form-grid two quick-nutrients">{(["calories", "protein", "carbs", "fat", "fiber"] as const).map((key) => <label className="field" key={key}><span>{key[0].toUpperCase() + key.slice(1)} {key !== "calories" && "(g)"}</span><input type="number" min="0" value={quick[key] || ""} placeholder="0" onChange={(e) => setQuick({ ...quick, [key]: +e.target.value })} /></label>)}</div>
             {error && <div className="error-banner">{error}</div>}
