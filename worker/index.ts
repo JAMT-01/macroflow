@@ -471,8 +471,13 @@ app.post("/api/telegram/webhook/register", async (c) => {
 });
 
 app.post("/api/telegram/webhook", async (c) => {
+  // This path cannot carry a session cookie, so the shared secret is the only
+  // thing standing between the diary and the open internet. Fail closed when it
+  // is unset: treating "no secret configured" as "no check needed" would let
+  // anyone POST a crafted update to insert meals or claim the chat id.
   const expected = c.env.TELEGRAM_WEBHOOK_SECRET;
-  if (expected && c.req.header("x-telegram-bot-api-secret-token") !== expected) return c.json({ error: "Forbidden" }, 403);
+  if (!expected) return c.json({ error: "Telegram webhook is not configured" }, 503);
+  if (c.req.header("x-telegram-bot-api-secret-token") !== expected) return c.json({ error: "Forbidden" }, 403);
   await handleTelegramUpdate(c.env, await c.req.json());
   return c.json({ ok: true });
 });
