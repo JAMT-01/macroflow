@@ -315,6 +315,39 @@ export function analyzeDescription(foods: FoodRow[], description: string, option
   };
 }
 
+/**
+ * Prompt for a meal logged from words alone, with no photograph at all.
+ *
+ * The photo prompt cannot be reused here: it opens by describing an image the
+ * model was never given, and its whole method section is about reading geometry
+ * off a plate. Estimating from a sentence is a different job — recall of typical
+ * servings — and it deserves wider ranges, since there is no visual evidence to
+ * narrow them.
+ */
+export function buildDescriptionPrompt(description: string, memories: Array<{ id: string; subject: string; note: string }>, mealContext?: { localTime: string; timezone: string; loggedDate?: string }) {
+  return `You are estimating one meal for a personal nutrition diary from a WRITTEN DESCRIPTION ONLY. There is no photograph. Output only the requested structured data. Never claim to have seen the meal, a plate, a portion, or any visual evidence.
+
+Use this evidence order:
+1. Quantities the user stated, in grams, millilitres, units, or household measures such as a cup, a plate, a spoonful, "un plato de", "una porción".
+2. A genuinely matching personal meal memory.
+3. Typical serving sizes for how this food is normally eaten in Argentina.
+
+Method:
+- Break the description into separately countable edible components, including drinks, oils, dressings, and spreads that carry real calories. If a component is implied by the dish rather than stated, include it and say so in the assumptions.
+- Convert vague quantities honestly. "Un plato de fideos" is a normal Argentine plated portion, not a competition serving. When the user gives no quantity at all, assume one ordinary serving for that food and put that assumption in writing.
+- Estimate edible grams for every item. Because nothing was seen, ranges must be WIDER than a photo estimate: the gap between gramsLow and gramsHigh should be roughly 40% of the point estimate for anything the user did not weigh or count, and may only be narrow where an exact quantity was stated.
+- Nutrients are TOTALS for the estimated portion, never per 100 g. Cross-check calories against roughly 4 kcal/g protein, 4 kcal/g carbohydrate, and 9 kcal/g fat.
+- Report dietary fibre for every item. Fibre is a COMPONENT of the carbohydrate figure, not an addition to it: fiber must never exceed carbs, and carbs must not be increased to make room for it. Meat, fish, eggs, dairy, and pure oils are 0 g fibre. Whole grains, legumes, vegetables, fruit with skin, nuts, and seeds carry most of it.
+- Cooking method changes calories a lot and is usually unstated. If frying, oil, butter, sugar, or portion count is the one fact that would move calories by about 10% or more, ask exactly one short high-impact question.
+- Set visualEvidence for every item to what the user actually wrote, quoting their words. Do not invent colours, plating, or appearance.
+- Suggest one diary category using Argentine context. The national GAPA pattern has four standard meals: Breakfast/desayuno, Lunch/almuerzo, Merienda, and Dinner/cena. Use Treat only for a standalone discretionary sweet/snack or antojo, not automatically for a normal merienda. The words the user used are stronger evidence than the clock; local time is a useful prior.
+- Return concise observable evidence and assumptions, not hidden reasoning.
+
+ARGENTINE DIARY CONTEXT: ${mealContext ? JSON.stringify(mealContext) : "local time unavailable"}
+PERSONAL MEMORIES (apply only matching ones and return their IDs): ${JSON.stringify(memories)}
+WHAT THE USER SAYS THEY ATE: ${description.trim() || "nothing written"}`;
+}
+
 export function buildSinglePhotoPrompt(reference: ScaleReference, description: string, memories: Array<{ id: string; subject: string; note: string }>, capture?: CaptureMetadata, mealContext?: { localTime: string; timezone: string; loggedDate?: string }) {
   const scaleInstruction = reference.mode === "none"
     ? "NO known-size plate or reference object is being provided for this photo. Do not convert pixels to centimeters and do not claim that any visible plate has a known diameter. Use familiar serving priors with wider uncertainty."

@@ -5,7 +5,7 @@ Macroflow is a personal macro tracker built for an iPhone camera, running entire
 ## What it does
 
 - Camera-first one-photo meal logging on iPhone (`capture="environment"`)
-- Photo + text analysis through one OpenRouter vision model
+- Photo analysis, or **describe what you ate in plain language** and get an estimate with no photo at all
 - English/Spanish food matching when AI is unavailable
 - Editable portions and macros before anything is saved
 - Chat corrections such as “I always bake this milanesa with sunflower oil”
@@ -180,6 +180,14 @@ The plate is only useful when the complete outer rim is in frame, so every scan 
 - **No size reference** — for a different plate, a bowl, a pan, a wrapper, or a cropped rim. The model is told not to convert pixels to centimetres at all and falls back to familiar serving sizes with a wider uncertainty range.
 
 Whatever you pick, the review screen reports whether the plate was actually used as scale, and confidence is capped when it was not.
+
+## Logging without a photo
+
+Forgot to photograph something? Open **Log a meal → AI**, skip the camera, and write what you ate: *“milanesa con puré y una coca, y de postre un alfajor”*. The button changes to **Estimate from description** and the model breaks it into items with macros, fibre and an Argentine meal category, exactly as a photo would.
+
+This takes a different prompt from the photo path, not the same one with the image missing. Estimating from a sentence is recall of typical servings rather than reading geometry off a plate, so the description prompt never claims to have seen anything, converts vague amounts honestly (*“un plato de fideos”* is a normal plated portion), and quotes your own words as the evidence for each item.
+
+Because nothing was seen, **the ranges are deliberately wider**: the server floors the spread at 40% either side of each estimate unless you stated a weight. Quantities tighten it — “dos huevos”, “200g de pollo” — but are never required. Correct anything in the chat afterwards and it re-estimates.
 
 ## My foods
 

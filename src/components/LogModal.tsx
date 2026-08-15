@@ -157,10 +157,10 @@ export function LogModal({ defaultMealType, date, settings, onClose, onSaved }: 
           {!analysis && mode === "scan" && <div className="scan-flow">
             <div className={`upload-zone ${preview ? "has-image" : ""}`} onClick={() => fileInput.current?.click()} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); void chooseImage(e.dataTransfer.files[0]); }}>
               <input ref={fileInput} hidden type="file" accept="image/*" capture="environment" onChange={(e) => chooseImage(e.target.files?.[0])} />
-              {preparingImage ? <><span className="camera-orb"><LoaderCircle className="spin" /></span><strong>Checking photo quality…</strong></> : preview ? <><img src={preview} alt="Meal preview" /><button className="change-photo"><ImagePlus size={16} /> Change photo</button></> : <><span className="camera-orb"><Camera /></span><strong>Take one meal photo</strong><p>About 45°, good light, full plate rim visible</p><button className="secondary"><ImagePlus size={17} /> Take photo</button></>}
+              {preparingImage ? <><span className="camera-orb"><LoaderCircle className="spin" /></span><strong>Checking photo quality…</strong></> : preview ? <><img src={preview} alt="Meal preview" /><button className="change-photo"><ImagePlus size={16} /> Change photo</button></> : <><span className="camera-orb"><Camera /></span><strong>Take one meal photo</strong><p>About 45°, good light, full plate rim visible</p><button className="secondary"><ImagePlus size={17} /> Take photo</button><em className="upload-optional">Optional — you can just describe the meal below</em></>}
             </div>
             {capture && <div className={`capture-quality ${capture.qualityScore >= 70 ? "good" : capture.qualityScore >= 45 ? "usable" : "poor"}`}><span>{capture.qualityScore >= 70 ? <Check size={17} /> : <Info size={17} />}</span><div><strong>{capture.qualityScore >= 70 ? "Photo quality looks good" : capture.qualityScore >= 45 ? "Photo is usable" : "Retake recommended"}</strong><small>{capture.issues.length ? capture.issues.join(" · ") : `${capture.width}×${capture.height} · lighting and sharpness passed`}</small></div></div>}
-            <div className="scale-choice">
+            {preview && <div className="scale-choice">
               <div className="scale-choice-head"><Ruler size={16} /><strong>Size reference for this photo</strong></div>
               <div className="scale-options">
                 <button type="button" className={scaleMode === "default-plate" ? "active" : ""} onClick={() => setScaleMode("default-plate")} aria-pressed={scaleMode === "default-plate"}>
@@ -172,11 +172,11 @@ export function LogModal({ defaultMealType, date, settings, onClose, onSaved }: 
                   <small>A different plate, a bowl, a pan, a wrapper, or a cropped rim. The model will not convert pixels to centimetres and portions come from familiar serving sizes with a wider range.</small>
                 </button>
               </div>
-            </div>
-            <label className="field"><span>Help the estimate <em>recommended</em></span><textarea rows={3} placeholder="Example: chicken milanesa, mashed potato, about 1 tbsp olive oil…" value={description} onChange={(e) => setDescription(e.target.value)} /></label>
+            </div>}
+            <label className="field describe-field"><span>{preview ? "Add a note about the meal" : "Or tell me what you ate"} {!preview && <em>no photo needed</em>}</span><textarea rows={3} placeholder={preview ? "Anything the camera cannot see: oil, sugar, hidden ingredients…" : "milanesa con puré y una coca, y de postre un alfajor"} value={description} onChange={(e) => setDescription(e.target.value)} />{!preview && <small>Plain language is fine. Quantities help — “un plato de fideos”, “dos huevos”, “200g de pollo” — but are not required.</small>}</label>
             {!settings.openrouterConfigured && <div className="notice warning"><Info size={18} /><span><strong>OpenRouter key not configured.</strong> Add it once in Settings to enable photo recognition. A description can still be matched locally.</span></div>}
             {error && <div className="error-banner">{error}</div>}
-            <button className="primary wide analyze-button" disabled={loading || preparingImage || (!image && !description.trim())} onClick={analyze}>{loading ? <><LoaderCircle className="spin" /> Measuring one photo…</> : <><Sparkles size={18} /> Analyze one photo</>}</button>
+            <button className="primary wide analyze-button" disabled={loading || preparingImage || (!image && !description.trim())} onClick={analyze}>{loading ? <><LoaderCircle className="spin" /> {preview ? "Measuring one photo…" : "Working out the portions…"}</> : <><Sparkles size={18} /> {preview ? "Analyze one photo" : "Estimate from description"}</>}</button>
             <p className="privacy-line"><Check size={14} /> Photos stay on your server and are sent to OpenRouter only for analysis.</p>
           </div>}
 

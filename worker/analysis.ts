@@ -1,6 +1,7 @@
 import {
   analysisJsonSchema,
   analyzeDescription as analyzeDescriptionCore,
+  buildDescriptionPrompt,
   buildSinglePhotoPrompt,
   calculate,
   calculateEstimateRange,
@@ -15,6 +16,7 @@ import {
   refinementJsonSchema,
   refinementPrompt,
   suggestArgentineMealType,
+  type AnalysisItem,
   type CaptureMetadata,
   type FoodRow,
   type MealAnalysis,
@@ -54,6 +56,23 @@ async function imageContent(env: Env, imagePath: string) {
   return { type: "image_url", image_url: { url: `data:${photo.contentType};base64,${toBase64(photo.bytes)}` } };
 }
 
+/**
+ * Nothing was seen, so the honest range is wider than the model tends to give.
+ * Floors the spread at 40% either side unless the user stated a weight.
+ */
+function widenForDescriptionOnly(item: AnalysisItem, statedWeight: boolean): AnalysisItem {
+  if (statedWeight) return item;
+  const spread = 0.4;
+  return {
+    ...item,
+    gramsLow: Math.round(Math.min(item.gramsLow, item.grams * (1 - spread))),
+    gramsHigh: Math.round(Math.max(item.gramsHigh, item.grams * (1 + spread))),
+    uncertaintyReasons: item.uncertaintyReasons.length
+      ? item.uncertaintyReasons
+      : ["Estimated from your description alone, with no photo to judge the portion."]
+  };
+}
+
 export async function analyzeWithConfiguredProvider(
   env: Env,
   description: string,
@@ -79,20 +98,23 @@ export async function analyzeWithConfiguredProvider(
     }
     result.capture = capture;
     result.measurement = fallbackMeasurement(reference, capture);
-    result.warnings.unshift("OpenRouter is not configured. Add the API key in Settings to analyze the photo; the text matcher was used.");
+    result.warnings.unshift(imagePath
+      ? "OpenRouter is not configured. Add the API key in Settings to analyze the photo; the text matcher was used."
+      : "OpenRouter is not configured, so your description was matched against the food list instead of being estimated by the model.");
     return result;
   }
 
   try {
     const memoryRows = await env.DB.prepare("SELECT id, subject, note FROM meal_memories ORDER BY updated_at DESC LIMIT 30").all<{ id: string; subject: string; note: string }>();
     const memories = memoryRows.results ?? [];
-    const content: Array<Record<string, unknown>> = [
-      { type: "text", text: buildSinglePhotoPrompt(reference, description, memories, capture, { localTime, timezone: settings.timezone, loggedDate }) }
-    ];
-    if (imagePath) {
-      const image = await imageContent(env, imagePath);
-      if (image) content.push(image);
-    }
+    const image = imagePath ? await imageContent(env, imagePath) : null;
+    // No photo means a different job entirely, so it gets its own prompt rather
+    // than one that opens by describing an image the model was never given.
+    const prompt = image
+      ? buildSinglePhotoPrompt(reference, description, memories, capture, { localTime, timezone: settings.timezone, loggedDate })
+      : buildDescriptionPrompt(description, memories, { localTime, timezone: settings.timezone, loggedDate });
+    const content: Array<Record<string, unknown>> = [{ type: "text", text: prompt }];
+    if (image) content.push(image);
 
     const startedAt = Date.now();
     const model = env.OPENROUTER_MODEL || settings.openrouter_model;
@@ -129,7 +151,8 @@ export async function analyzeWithConfiguredProvider(
     const allowTightRange = /\b\d+(?:[.,]\d+)?\s*(?:g|gr|gram|grams|gramos)\b/i.test(description);
     const items = (parsed.items ?? [])
       .filter((item) => item.name && Number(item.grams) > 0)
-      .map((item) => normalizeItem(foods, item, measurement, allowTightRange));
+      .map((item) => normalizeItem(foods, item, measurement, allowTightRange))
+      .map((item) => (image ? item : widenForDescriptionOnly(item, allowTightRange)));
 
     const appliedIds = (parsed.appliedMemoryIds ?? []).filter((id) => memories.some((memory) => memory.id === id));
     if (appliedIds.length) {
@@ -147,9 +170,11 @@ export async function analyzeWithConfiguredProvider(
       items,
       assumptions: parsed.assumptions ?? [],
       warnings: [
-        "One-photo estimate: review portions before saving.",
+        image
+          ? "One-photo estimate: review portions before saving."
+          : "Estimated from your description alone, with no photo. Check the portions before saving.",
         ...(capture?.issues.length ? [`Photo check: ${capture.issues.join(", ")}.`] : []),
-        ...(measurement.plateUsedAsScale ? [] : ["The complete plate rim was not usable as scale, so portion uncertainty is wider."]),
+        ...(image && !measurement.plateUsedAsScale ? ["The complete plate rim was not usable as scale, so portion uncertainty is wider."] : []),
         ...(parsed.warnings ?? [])
       ],
       range: calculateEstimateRange(items),
@@ -160,8 +185,10 @@ export async function analyzeWithConfiguredProvider(
       capture,
       usage: { model, costUsd: Number(payload.usage?.cost ?? 0), latencyMs: Date.now() - startedAt },
       assistantReply: appliedIds.length
-        ? "I used a relevant meal memory and the one-photo plate estimate. Confirm what changed today."
-        : "I used the visible plate when reliable and kept a realistic uncertainty range. Tell me what the camera cannot see.",
+        ? "I used a relevant meal memory alongside your description. Confirm what changed today."
+        : image
+          ? "I used the visible plate when reliable and kept a realistic uncertainty range. Tell me what the camera cannot see."
+          : "I estimated this from your words, so the range is wide. Tell me quantities or how it was cooked and I will tighten it.",
       appliedMemories: memories.filter((memory) => appliedIds.includes(memory.id)).map((memory) => `${memory.subject}: ${memory.note}`)
     };
   } catch (error) {

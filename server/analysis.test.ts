@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { analyzeDescription, buildSinglePhotoPrompt, calculateEstimateRange, calibrateAnalysisConfidence, matchFood, suggestArgentineMealType } from "./analysis.js";
-import { normalizeItem } from "../shared/analysis-core.js";
+import { buildDescriptionPrompt, normalizeItem } from "../shared/analysis-core.js";
 
 const capture = { width: 3024, height: 4032, brightness: .5, contrast: .2, sharpness: .4, qualityScore: 88, issues: [] };
 
@@ -132,6 +132,23 @@ describe("local meal analysis", () => {
     const range = calculateEstimateRange([{ ...item, gramsLow: 80, gramsHigh: 120 }]);
     expect(range.fiber.low).toBeLessThan(item.fiber);
     expect(range.fiber.high).toBeGreaterThan(item.fiber);
+  });
+
+  it("never mentions a photograph when estimating from words alone", () => {
+    const prompt = buildDescriptionPrompt("milanesa con pure y una coca", [], { localTime: "21:30", timezone: "America/Buenos_Aires" });
+    expect(prompt).toContain("WRITTEN DESCRIPTION ONLY");
+    expect(prompt).toContain("There is no photograph");
+    expect(prompt).toContain("Never claim to have seen");
+    expect(prompt).not.toContain("ONE ordinary RGB photograph");
+    expect(prompt).not.toContain("plate rim");
+  });
+
+  it("asks for wider ranges and keeps the fibre and Argentine rules when there is no photo", () => {
+    const prompt = buildDescriptionPrompt("un plato de fideos", [], { localTime: "13:00", timezone: "America/Buenos_Aires" });
+    expect(prompt).toContain("WIDER than a photo estimate");
+    expect(prompt).toContain("fiber must never exceed carbs");
+    expect(prompt).toContain("Merienda");
+    expect(prompt).toContain("un plato de fideos");
   });
 
   it("aggregates item gram uncertainty into macro ranges", () => {
