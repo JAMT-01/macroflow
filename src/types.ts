@@ -161,6 +161,19 @@ export type LoggedFood = Nutrients & {
   firstLoggedAt: string;
 };
 
+export type ProgressPose = "front" | "side" | "back";
+
+/** A body progress photo, grouped by the local date it was taken. */
+export type ProgressPhoto = {
+  id: string;
+  takenAt: string;
+  takenDate: string;
+  pose: ProgressPose;
+  imagePath: string;
+  weightKg: number | null;
+  notes: string;
+};
+
 export type MealMemory = { id: string; subject: string; note: string; timesUsed: number; createdAt: string; updatedAt: string };
 
 export type HistoryDay = Nutrients & { date: string; meals: number };

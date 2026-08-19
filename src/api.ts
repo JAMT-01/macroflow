@@ -1,4 +1,4 @@
-import type { Analysis, BenchmarkCase, BenchmarkResearch, BenchmarkRun, CaptureMetadata, Dashboard, Food, History, MealItem, LoggedFood, MealMemory, MealType, QuickAdd, ScaleReference, Settings, VisionModel } from "./types";
+import type { Analysis, BenchmarkCase, BenchmarkResearch, BenchmarkRun, CaptureMetadata, Dashboard, Food, History, MealItem, LoggedFood, MealMemory, MealType, ProgressPhoto, ProgressPose, QuickAdd, ScaleReference, Settings, VisionModel } from "./types";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
@@ -36,6 +36,17 @@ export const api = {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ analysis, message })
   }),
   memories: () => request<MealMemory[]>("/api/memories"),
+  progressPhotos: () => request<ProgressPhoto[]>("/api/progress"),
+  addProgressPhoto: (image: File, pose: ProgressPose, weightKg?: number, notes?: string) => {
+    const form = new FormData();
+    form.append("image", image);
+    form.append("pose", pose);
+    form.append("takenAt", new Date().toISOString());
+    if (weightKg) form.append("weightKg", String(weightKg));
+    if (notes?.trim()) form.append("notes", notes.trim());
+    return request<ProgressPhoto>("/api/progress", { method: "POST", body: form });
+  },
+  deleteProgressPhoto: (id: string) => request<void>(`/api/progress/${id}`, { method: "DELETE" }),
   quickAdds: () => request<QuickAdd[]>("/api/quick-adds"),
   myFoods: (query = "") => request<LoggedFood[]>(`/api/my-foods?q=${encodeURIComponent(query)}`),
   deleteMemory: (id: string) => request<void>(`/api/memories/${id}`, { method: "DELETE" }),

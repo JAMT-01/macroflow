@@ -103,3 +103,41 @@ export async function prepareMealPhoto(source: File): Promise<PreparedPhoto> {
     }
   };
 }
+
+/**
+ * Prepares a body progress photo for upload.
+ *
+ * Re-encoding through a canvas is not only about bandwidth: it drops the EXIF
+ * block, and iPhone photos carry GPS coordinates there. Nothing upstream strips
+ * that, so if it is not removed here it gets stored. `imageOrientation` applies
+ * the EXIF rotation *before* the metadata is discarded, otherwise a portrait
+ * phone photo would be stored on its side.
+ */
+export async function prepareProgressPhoto(source: File): Promise<File> {
+  const maxEdge = 1600;
+  const bitmap = await createBitmap(source);
+  const sourceWidth = "width" in bitmap ? bitmap.width : (bitmap as HTMLImageElement).naturalWidth;
+  const sourceHeight = "height" in bitmap ? bitmap.height : (bitmap as HTMLImageElement).naturalHeight;
+  if (!sourceWidth || !sourceHeight) throw new Error("That photo has no readable dimensions.");
+
+  const scale = Math.min(1, maxEdge / Math.max(sourceWidth, sourceHeight));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+  canvas.height = Math.max(1, Math.round(sourceHeight * scale));
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Photo processing is not available in this browser.");
+  context.drawImage(bitmap as CanvasImageSource, 0, 0, canvas.width, canvas.height);
+  if ("close" in bitmap && typeof bitmap.close === "function") bitmap.close();
+
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+  if (!blob) throw new Error("That photo could not be prepared for upload.");
+  return new File([blob], "progress.jpg", { type: "image/jpeg", lastModified: Date.now() });
+}
+
+async function createBitmap(file: File): Promise<ImageBitmap | HTMLImageElement> {
+  if (typeof createImageBitmap === "function") {
+    try { return await createImageBitmap(file, { imageOrientation: "from-image" }); }
+    catch { /* older Safari lacks the option; fall back to an <img> */ }
+  }
+  return loadImage(file);
+}

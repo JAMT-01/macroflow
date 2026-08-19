@@ -42,7 +42,7 @@ app.use("*", async (c, next) => {
 
   if (await hasValidSession(c.req.raw, password)) return next();
 
-  if (path.startsWith("/api/") || path.startsWith("/uploads/")) {
+  if (path.startsWith("/api/") || path.startsWith("/uploads/") || path.startsWith("/progress-photos/")) {
     return c.json({ error: "Not signed in", signedOut: true }, 401);
   }
   return c.html(loginPage({ configured: true }), 401);
@@ -400,6 +400,83 @@ app.get("/api/my-foods", async (c) => {
   `);
   const rows = await (query ? statement.bind(`%${query.toLowerCase()}%`) : statement).all<Record<string, unknown>>();
   return c.json(rows.results ?? []);
+});
+
+
+/* ---------------------------------------------------------- progress photos */
+
+const POSES = ["front", "side", "back"] as const;
+
+const serializeProgressPhoto = (row: Record<string, unknown>) => ({
+  id: row.id,
+  takenAt: row.taken_at,
+  takenDate: row.taken_date,
+  pose: row.pose,
+  imagePath: row.image_path,
+  weightKg: row.weight_kg,
+  notes: row.notes
+});
+
+app.get("/api/progress", async (c) => {
+  const rows = await c.env.DB.prepare(
+    "SELECT id, taken_at, taken_date, pose, image_path, weight_kg, notes FROM progress_photos ORDER BY taken_at DESC LIMIT 500"
+  ).all<Record<string, unknown>>();
+  return c.json((rows.results ?? []).map(serializeProgressPhoto));
+});
+
+app.post("/api/progress", async (c) => {
+  const form = await c.req.formData();
+  const image = form.get("image");
+  if (!image || typeof image === "string") return c.json({ error: "Attach a photo" }, 400);
+  if (!image.type.startsWith("image/")) return c.json({ error: "Only image uploads are supported" }, 400);
+  if (image.size > 15 * 1024 * 1024) return c.json({ error: "That photo is larger than 15 MB" }, 400);
+
+  const pose = String(form.get("pose") || "front");
+  if (!POSES.includes(pose as typeof POSES[number])) return c.json({ error: "Pose must be front, side or back" }, 400);
+
+  const rawWeight = String(form.get("weightKg") || "").trim();
+  const weightKg = rawWeight ? Number(rawWeight) : null;
+  if (weightKg !== null && (!Number.isFinite(weightKg) || weightKg < 20 || weightKg > 400)) {
+    return c.json({ error: "Enter a valid weight, or leave it blank" }, 400);
+  }
+
+  // Trust the client's clock only for the instant; the diary date that groups
+  // photos together has to come from the configured timezone, like every other
+  // date in the app.
+  const takenAtRaw = String(form.get("takenAt") || "");
+  const takenAt = Number.isFinite(Date.parse(takenAtRaw)) ? new Date(takenAtRaw).toISOString() : new Date().toISOString();
+  const settings = await getSettings(c.env);
+  const takenDate = dateInTimeZone(takenAt, settings.timezone);
+
+  const id = crypto.randomUUID();
+  const extension = image.type === "image/png" ? "png" : "jpg";
+  const imagePath = `/progress-photos/${id}.${extension}`;
+  await putPhoto(c.env, photoKey(imagePath), await image.arrayBuffer(), image.type);
+
+  await c.env.DB.prepare(
+    "INSERT INTO progress_photos (id, taken_at, taken_date, pose, image_path, weight_kg, notes) VALUES (?, ?, ?, ?, ?, ?, ?)"
+  ).bind(id, takenAt, takenDate, pose, imagePath, weightKg, String(form.get("notes") || "").slice(0, 500)).run();
+
+  return c.json({ id, takenAt, takenDate, pose, imagePath, weightKg, notes: String(form.get("notes") || "") }, 201);
+});
+
+app.delete("/api/progress/:id", async (c) => {
+  const id = c.req.param("id");
+  const row = await c.env.DB.prepare("SELECT image_path FROM progress_photos WHERE id = ?").bind(id).first<{ image_path: string }>();
+  if (!row) return c.json({ error: "Photo not found" }, 404);
+  await c.env.DB.prepare("DELETE FROM progress_photos WHERE id = ?").bind(id).run();
+  await deletePhoto(c.env, photoKey(row.image_path));
+  return c.body(null, 204);
+});
+
+app.get("/progress-photos/:key", async (c) => {
+  const photo = await getPhoto(c.env, `progress-photos/${c.req.param("key")}`);
+  if (!photo) return c.notFound();
+  return c.body(photo.bytes, 200, {
+    "content-type": photo.contentType,
+    "cache-control": "private, max-age=31536000, immutable",
+    "vary": "Cookie"
+  });
 });
 
 app.get("/api/memories", async (c) => {
