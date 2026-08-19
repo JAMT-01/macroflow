@@ -6,6 +6,7 @@ import { Layout, type Tab } from "./components/Layout";
 import { Onboarding } from "./screens/Onboarding";
 import { Today } from "./screens/Today";
 import { Progress } from "./screens/Progress";
+import { Photos } from "./screens/Photos";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { LogModal } from "./components/LogModal";
 
@@ -35,6 +36,7 @@ export default function App() {
     <Layout tab={tab} setTab={navigate} onScan={() => openLog()}>
       {tab === "today" && <Today date={selectedDate} setDate={setSelectedDate} openLog={openLog} refresh={refresh} onChanged={changed} />}
       {tab === "progress" && <Progress settings={settings} refresh={refresh} onSettings={setSettings} />}
+      {tab === "photos" && <Photos settings={settings} />}
       {tab === "settings" && <SettingsScreen settings={settings} onSettings={setSettings} />}
       {logState.open && <LogModal defaultMealType={logState.mealType} date={selectedDate} settings={settings} onClose={() => setLogState({ ...logState, open: false })} onSaved={() => { changed(); setLogState({ ...logState, open: false }); }} />}
     </Layout>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Camera, Images, Lock, LoaderCircle, Trash2, Unlock } from "lucide-react";
+import { Camera, Images, Lock, LoaderCircle, Trash2 } from "lucide-react";
 import { api } from "../api";
+import { PhotoLock } from "./PhotoLock";
 import { prepareProgressPhoto } from "../imageCapture";
 import type { ProgressPhoto, ProgressPose } from "../types";
 
@@ -17,7 +18,6 @@ export function ProgressPhotos({ suggestedWeight }: { suggestedWeight: number })
   const [unlockMinutes, setUnlockMinutes] = useState(15);
   const [separateSecret, setSeparateSecret] = useState(false);
   const [unlocked, setUnlocked] = useState<boolean | null>(null);
-  const [passphrase, setPassphrase] = useState("");
   const [unlocking, setUnlocking] = useState(false);
   const [photos, setPhotos] = useState<ProgressPhoto[] | null>(null);
   const [pose, setPose] = useState<ProgressPose>("front");
@@ -37,12 +37,10 @@ export function ProgressPhotos({ suggestedWeight }: { suggestedWeight: number })
     api.progressPhotos().then(setPhotos).catch(() => setPhotos([]));
   }, [unlocked]);
 
-  async function unlock(event: React.FormEvent) {
-    event.preventDefault();
+  async function unlock(code: string) {
     setUnlocking(true); setError("");
     try {
-      await api.unlockPhotos(passphrase);
-      setPassphrase("");
+      await api.unlockPhotos(code);
       setUnlocked(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not unlock");
@@ -107,15 +105,14 @@ export function ProgressPhotos({ suggestedWeight }: { suggestedWeight: number })
 
   if (!unlocked) return (
     <section className="chart-card photos-card locked">
-      <div className="chart-header"><div><p className="eyebrow">BODY</p><h2>Progress photos</h2></div><span className="lock-badge"><Lock size={13} /> Locked</span></div>
-      <form className="photo-unlock" onSubmit={unlock}>
-        <p>These stay locked even while you are signed in. Enter your {separateSecret ? "photo passphrase" : "passphrase"} to view them; they lock again after {unlockMinutes} minutes, when you close the browser, or whenever you tap Lock.</p>
-        <div className="photo-unlock-row">
-          <input type="password" autoComplete="current-password" placeholder={separateSecret ? "Photo passphrase" : "Passphrase"} value={passphrase} onChange={(e) => setPassphrase(e.target.value)} />
-          <button className="primary" disabled={unlocking || !passphrase}>{unlocking ? <LoaderCircle className="spin" size={16} /> : <Unlock size={16} />} Unlock</button>
-        </div>
-        {error && <div className="error-banner">{error}</div>}
-      </form>
+      <PhotoLock
+        separateSecret={separateSecret}
+        unlockMinutes={unlockMinutes}
+        unlocking={unlocking}
+        error={error}
+        onSubmit={unlock}
+        onDismissError={() => setError("")}
+      />
     </section>
   );
 

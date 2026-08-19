@@ -19,7 +19,7 @@
 }
 
 * { box-sizing: border-box; }
-html { background: #f3f5ef; }
+html { background: #f3f5ef; touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; } /* pan-x pan-y scrolls but never pinch-zooms; see src/lockZoom.ts */
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 button, input, select, textarea { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
@@ -186,10 +186,12 @@ code { font-size: .88em; background: #edf0e9; padding: 2px 5px; border-radius: 5
 
 @media (max-width: 760px) {
   .sidebar { display:none; }.main-content { margin-left:0; padding-bottom:calc(100px + env(safe-area-inset-bottom)); }
-  /* Four equal cells: every item — Scan included — sits centred in its own column,
-     so the centres land on an even 23.7% pitch instead of the Scan button floating
-     at 50% over the left edge of the empty track that was left for it. */
-  .bottom-nav { display:grid; position:fixed; z-index:50; bottom:0; left:0; right:0; height:calc(72px + env(safe-area-inset-bottom)); padding:8px max(10px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left)); grid-template-columns:repeat(4,1fr); background:rgba(255,255,255,.96); border-top:1px solid rgba(215,221,212,.9); box-shadow:0 -9px 30px rgba(25,38,28,.06); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); }
+  /* Five equal cells, Scan in the middle one. Every item — Scan included — sits
+     centred in its own column, so the centres land on an even pitch instead of the
+     Scan button floating over the edge of a track left empty for it. The middle
+     column is what keeps Scan optically centred now that Photos is a destination
+     of its own; adding a sixth item would break that and needs a rethink. */
+  .bottom-nav { display:grid; position:fixed; z-index:50; bottom:0; left:0; right:0; height:calc(72px + env(safe-area-inset-bottom)); padding:8px max(10px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left)); grid-template-columns:repeat(5,1fr); background:rgba(255,255,255,.96); border-top:1px solid rgba(215,221,212,.9); box-shadow:0 -9px 30px rgba(25,38,28,.06); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); }
   .bottom-nav button { border:0; padding:0; background:transparent; display:grid; grid-template-rows:1fr auto; justify-items:center; align-items:center; gap:5px; color:#8b938b; cursor:pointer; }
   .bottom-nav button > span:not(.scan-fab-icon),.bottom-nav .scan-fab small { font-size:8px; font-weight:600; line-height:1; }
   .bottom-nav button.active,.bottom-nav .scan-fab { color:#233526; }
@@ -228,3 +230,59 @@ code { font-size: .88em; background: #edf0e9; padding: 2px 5px; border-radius: 5
 .photo-sources { display:flex; gap:7px; flex-wrap:wrap; }.photo-sources button { display:inline-flex; align-items:center; gap:6px; }
 .photo-saving { display:inline-flex; align-items:center; gap:7px; color:#5f7355; font-size:11px; font-weight:600; }
 .pick-gallery { margin-top:9px; display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); background:white; color:#5f6a5f; border-radius:10px; padding:7px 12px; font-size:10px; font-weight:700; cursor:pointer; }.pick-gallery:hover { border-color:#9eae92; }
+
+/* --- Progress photo lock ------------------------------------------------
+   Its own screen rather than a field in the card: a code entered in public is
+   worth a deliberate surface, and the pad has to be thumb-sized on a phone.
+   Keys are buttons, so none of them trigger the iOS focus zoom the block at the
+   end of this file guards against; the typed fallback is 16px for that reason. */
+.photos-card.locked { padding: 26px 20px 24px; }
+.photo-lock { max-width: 320px; margin: 0 auto; text-align: center; }
+.photo-lock-crest { width:54px; height:54px; margin:0 auto 14px; border-radius:17px; background:#eef4e6; color:#4d6a34; display:grid; place-items:center; }
+.photo-lock h2 { font-size:19px; margin:0 0 7px; }
+.photo-lock-sub { color:var(--muted); font-size:12px; line-height:1.6; margin:0 0 18px; }
+
+.photo-lock-display { height:56px; border:1px solid var(--line); border-radius:14px; background:var(--soft); display:flex; align-items:center; justify-content:center; gap:9px; padding:0 14px; flex-wrap:wrap; }
+.photo-lock-display i { width:11px; height:11px; border-radius:50%; background:#41563b; animation:dotIn .13s ease-out; }
+.photo-lock-placeholder { color:#9aa39a; font-size:13px; }
+@keyframes dotIn { from { transform:scale(.3); opacity:0; } }
+.photo-lock-display.wrong { border-color:#e3b3aa; background:#fdf3f1; animation:lockShake .32s ease; }
+@keyframes lockShake { 10%,90%{transform:translateX(-2px)} 30%,70%{transform:translateX(4px)} 50%{transform:translateX(-4px)} }
+
+.photo-lock-error { color:#a8503f; font-size:12px; line-height:1.45; margin:10px 0 0; min-height:17px; }
+.photo-lock-error.hidden { visibility:hidden; }
+
+.photo-lock-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-top:14px; }
+.photo-lock-pad button { height:56px; border:1px solid var(--line); border-radius:15px; background:var(--surface); color:var(--ink); font:600 22px "Manrope",sans-serif; cursor:pointer; display:grid; place-items:center; transition:background .12s, transform .06s; }
+.photo-lock-pad button:active:not(:disabled) { background:#eef2ea; transform:scale(.96); }
+.photo-lock-pad button:disabled { opacity:.35; cursor:default; }
+.photo-lock-pad .pad-soft { background:transparent; border-color:transparent; color:#778176; }
+.photo-lock-pad .pad-soft:active:not(:disabled) { background:#eef2ea; }
+.photo-lock-go { margin-top:14px; justify-content:center; }
+
+.photo-lock-typed { display:grid; gap:11px; text-align:left; }
+.photo-lock-typed input { height:50px; border:1px solid var(--line); border-radius:13px; background:var(--surface); padding:0 14px; font-size:16px; outline:0; }
+.photo-lock-typed input:focus { border-color:#9eae92; }
+.photo-lock-typed .primary { justify-content:center; }
+.photo-lock-swap { border:0; background:transparent; color:#5f7355; font-size:12px; font-weight:700; cursor:pointer; padding:4px; }
+
+/* iOS Safari zooms the whole page in whenever you focus a control whose font-size
+   is under 16px, and it ignores `maximum-scale`/`user-scalable=no` — so the
+   viewport meta cannot prevent it. With pinch disabled (src/lockZoom.ts) there is
+   then no way to zoom back out, which is why one tap on the photo passphrase left
+   the app stuck magnified. Every control that can take keyboard focus is therefore
+   16px on touch devices; pointers that never trigger the behaviour keep the
+   compact sizes above. Buttons are exempt — focusing one does not zoom. */
+@media (pointer: coarse) {
+  .photo-unlock-row input,
+  .chat-composer input,
+  .review-item input, .selected-row input,
+  .reminder-row input[type=time],
+  .log-header select,
+  .meal-type-card select,
+  .model-select select,
+  .file-pair input { font-size: 16px; }
+  /* Grams are the only ones sized around their old 10px text; 44px still fits the
+     67px column (62px under 410px) and holds four digits at the larger size. */
+  .review-item input, .selected-row input { width: 44px; }
+}

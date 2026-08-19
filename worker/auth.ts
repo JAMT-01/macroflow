@@ -207,13 +207,14 @@ export function loginPage(options: { error?: string; configured: boolean } = { c
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#172019" />
 <meta name="robots" content="noindex, nofollow" />
 <title>Macroflow</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
+  html { touch-action:pan-x pan-y; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
   body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px;
     background:#172019; color:#f3f5ef; font-family:"DM Sans","Segoe UI",system-ui,sans-serif; }
   form { width:min(360px,100%); display:grid; gap:14px; }

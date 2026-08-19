@@ -114,8 +114,9 @@ src/          React app (Vite). The whole UI.
   types.ts          client types, mirroring the Worker's JSON
   mealTypes.ts      the five Argentine categories + offline time-band guess
   imageCapture.ts   client-side downscale, quality scoring, EXIF stripping
-  components/       LogModal (the big one), ProgressPhotos, Layout, MacroRing
-  screens/          Today, Progress, SettingsScreen, Onboarding, BenchmarkLab*
+  lockZoom.ts       cancels iOS pinch gestures; the viewport meta is not enough
+  components/       LogModal (the big one), ProgressPhotos, PhotoLock, Layout, MacroRing
+  screens/          Today, Progress, Photos, SettingsScreen, Onboarding, BenchmarkLab*
 
 worker/       The deployed backend.
   index.ts          Hono routes, middleware, all endpoints
@@ -304,10 +305,10 @@ Workers cannot hold a long-lived loop, which is why Telegram is a **webhook** ra
 ## 9. Deploying
 
 ```bash
-pnpm deploy
+pnpm run deploy
 ```
 
-That runs `pnpm check`, `vite build`, then `wrangler deploy`.
+That runs `pnpm check`, `vite build`, then `wrangler deploy`. **The `run` is not optional** — `deploy` is also a built-in pnpm command (deploy a workspace package to a directory), and the built-in wins over a script of the same name, so bare `pnpm deploy` never reaches this script.
 
 ### The versions trap — read this
 
@@ -408,9 +409,11 @@ Things that have actually cost hours on this project.
 - **Deploying overwrites whatever is live.** If work exists only in Cloudflare — edited in the dashboard, or built on another machine — `pnpm deploy` destroys it. Confirm the repo is the source of truth first.
 - **A stale `wrangler dev` on :8787 serves old code.** Vite proxies `/api` there, so backend edits appear to do nothing. Check what owns the port and when it started.
 - **`wrangler versions secret put` does not deploy.** See §9.
+- **`pnpm deploy` does not run the deploy script.** pnpm has its own `deploy` built-in and it shadows the script; you need `pnpm run deploy`. Every other script name in `package.json` is free of collisions.
 - **PowerShell reserves `<`.** Copying a command containing a `<placeholder>` fails before wrangler ever runs.
 - **Do not reuse the photo prompt for text-only meals**, or the reverse.
 - **`capture="environment"` means camera-only on iOS.** Offering the gallery needs a second `<input>` without the attribute. That is why there are two.
+- **A control under 16px makes iOS zoom the page in when you focus it.** Safari ignores `maximum-scale`, so the viewport meta does not stop it, and because pinch is locked (`src/lockZoom.ts`) there is no way back out — the app stays magnified until a reload. Any new `<input>`, `<select>` or `<textarea>` needs 16px on touch; the guard is the `@media (pointer: coarse)` block at the end of `src/styles.css`, and the login page in `worker/auth.ts` carries its own copy.
 
 ---
 
@@ -427,11 +430,13 @@ Why things are the way they are, so they do not get undone by accident.
 | Fibre clamped to carbs | prevents inflated carb totals on high-fibre meals |
 | Photo unlock separate from login | body photos are more sensitive than macros |
 | Global rate limit on photo unlock | a short PIN makes per-IP limits meaningless |
-| Progress photos inside the Progress tab | it already tracks the body by number; no nav surgery needed |
+| Progress photos as their own nav item | superseded the original call to keep them in the Progress tab: a passphrase-gated section reads as a destination, not a card halfway down a scroll. The bottom nav is five equal cells with Scan in the middle, which is what keeps it centred — a sixth item breaks that |
 | Progress photos rebuilt in React | the vanilla version guessed the theme by scanning the DOM and fought React over the nav |
 | EXIF stripped via canvas re-encode | iPhone photos carry GPS and nothing upstream removes it |
 | Telegram webhook, not polling | Workers cannot hold a loop |
 | Benchmark lab not deployed | needs local Python and 7 MB of dataset images |
+| Page zoom locked on touch | the app was being pinch-zoomed like a photo by accident; iOS ignores `user-scalable=no`, so `src/lockZoom.ts` cancels its gesture events as well |
+| Form controls forced to 16px on touch | locking pinch removed the escape from iOS focus zoom, so the zoom has to be prevented rather than undone |
 
 ---
 

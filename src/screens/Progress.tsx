@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowDownRight, CalendarDays, Check, Flame, Scale, TrendingUp } from "lucide-react";
 import { api } from "../api";
 import type { History, Settings } from "../types";
-import { ProgressPhotos } from "../components/ProgressPhotos";
 
 function addDays(date: string, amount: number) { const next = new Date(`${date}T12:00:00Z`); next.setUTCDate(next.getUTCDate() + amount); return next.toISOString().slice(0, 10); }
 
@@ -54,8 +53,6 @@ export function Progress({ settings, refresh, onSettings }: { settings: Settings
         ].map((macro) => <div className="average-row" key={macro.label}><div><span>{macro.label}</span><strong>{Math.round(macro.value)}g <small>/ {macro.target}g</small></strong></div><div className="average-track"><span className={macro.color} style={{ width: `${Math.min(100, macro.value / macro.target * 100)}%` }} /></div></div>)}</section>
         <section className="weight-card"><div><p className="eyebrow">WEIGHT CHECK-IN</p><h2>Log today's weight</h2><p>One data point is noise. A trend is useful.</p></div><div className="weight-input"><input type="number" step="0.1" value={weight} onChange={(e) => setWeight(+e.target.value)} /><span>kg</span></div><button className="primary wide" disabled={saving || weight < 20} onClick={addWeight}>{saving ? "Saving…" : "Save check-in"}</button>{history.weights.length > 0 && <div className="weight-history">{history.weights.slice(-4).reverse().map((entry) => <span key={entry.id}><small>{new Date(entry.recordedAt).toLocaleDateString([], { month: "short", day: "numeric" })}</small><strong>{entry.weightKg.toFixed(1)} kg</strong></span>)}</div>}</section>
       </div>
-
-      <ProgressPhotos suggestedWeight={latestWeight} />
     </div>
   );
 }
