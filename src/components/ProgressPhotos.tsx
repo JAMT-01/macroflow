@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Camera, ImagePlus, Lock, LoaderCircle, Trash2, Unlock } from "lucide-react";
+import { Camera, Images, Lock, LoaderCircle, Trash2, Unlock } from "lucide-react";
 import { api } from "../api";
 import { prepareProgressPhoto } from "../imageCapture";
 import type { ProgressPhoto, ProgressPose } from "../types";
@@ -25,7 +25,11 @@ export function ProgressPhotos({ suggestedWeight }: { suggestedWeight: number })
   const [view, setView] = useState<"timeline" | "compare">("timeline");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const fileInput = useRef<HTMLInputElement>(null);
+  // Two inputs rather than one: iOS treats `capture` as "camera only", so a
+  // single control cannot offer both. Desktop ignores `capture` and shows a file
+  // picker for either button, which is the sensible behaviour there anyway.
+  const cameraInput = useRef<HTMLInputElement>(null);
+  const galleryInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => { api.progressState().then((state) => { setUnlocked(state.unlocked); setUnlockMinutes(state.unlockMinutes); setSeparateSecret(state.separateSecret); }).catch(() => setUnlocked(false)); }, []);
   useEffect(() => {
@@ -71,7 +75,9 @@ export function ProgressPhotos({ suggestedWeight }: { suggestedWeight: number })
       if (message.includes("locked")) handleLockedOut(); else setError(message);
     } finally {
       setSaving(false);
-      if (fileInput.current) fileInput.current.value = "";
+      // Cleared so picking the same file twice still fires a change event.
+      if (cameraInput.current) cameraInput.current.value = "";
+      if (galleryInput.current) galleryInput.current.value = "";
     }
   }
 
@@ -132,10 +138,14 @@ export function ProgressPhotos({ suggestedWeight }: { suggestedWeight: number })
         <div className="pose-row">{POSES.map((option) => (
           <button key={option} className={pose === option ? "active" : ""} onClick={() => setPose(option)}>{POSE_LABEL[option]}</button>
         ))}</div>
-        <input ref={fileInput} hidden type="file" accept="image/*" capture="environment" onChange={(e) => addPhoto(e.target.files?.[0])} />
-        <button className="secondary" disabled={saving} onClick={() => fileInput.current?.click()}>
-          {saving ? <><LoaderCircle className="spin" size={17} /> Saving…</> : <><ImagePlus size={17} /> Add {POSE_LABEL[pose].toLowerCase()} photo</>}
-        </button>
+        <input ref={cameraInput} hidden type="file" accept="image/*" capture="environment" onChange={(e) => addPhoto(e.target.files?.[0])} />
+        <input ref={galleryInput} hidden type="file" accept="image/*" onChange={(e) => addPhoto(e.target.files?.[0])} />
+        <div className="photo-sources">
+          {saving ? <span className="photo-saving"><LoaderCircle className="spin" size={16} /> Saving {POSE_LABEL[pose].toLowerCase()} photo…</span> : <>
+            <button className="secondary" onClick={() => cameraInput.current?.click()}><Camera size={16} /> Camera</button>
+            <button className="secondary" onClick={() => galleryInput.current?.click()}><Images size={16} /> Gallery</button>
+          </>}
+        </div>
       </div>
       {error && <div className="error-banner">{error}</div>}
 

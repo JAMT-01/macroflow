@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, BookMarked, Brain, Camera, Check, Eye, History, ImagePlus, Info, LoaderCircle, Plus, Ruler, Search, Send, Sparkles, Trash2, Utensils, X, Zap } from "lucide-react";
+import { ArrowLeft, BookMarked, Brain, Camera, Check, Eye, History, Images, ImagePlus, Info, LoaderCircle, Plus, Ruler, Search, Send, Sparkles, Trash2, Utensils, X, Zap } from "lucide-react";
 import { api, sumItems } from "../api";
 import { prepareMealPhoto } from "../imageCapture";
 import { guessMealTypeFromLocalTime, mealTypeMeta, mealTypes } from "../mealTypes";
@@ -30,6 +30,8 @@ export function LogModal({ defaultMealType, date, settings, onClose, onSaved }: 
   const [myFoods, setMyFoods] = useState<LoggedFood[]>([]);
   const [myQuery, setMyQuery] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
+  // `capture` means camera-only on iOS, so picking from the library needs its own input.
+  const galleryInput = useRef<HTMLInputElement>(null);
 
   const scaleReference: ScaleReference = scaleMode === "none"
     ? { mode: "none", diameterCm: null }
@@ -157,7 +159,8 @@ export function LogModal({ defaultMealType, date, settings, onClose, onSaved }: 
           {!analysis && mode === "scan" && <div className="scan-flow">
             <div className={`upload-zone ${preview ? "has-image" : ""}`} onClick={() => fileInput.current?.click()} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); void chooseImage(e.dataTransfer.files[0]); }}>
               <input ref={fileInput} hidden type="file" accept="image/*" capture="environment" onChange={(e) => chooseImage(e.target.files?.[0])} />
-              {preparingImage ? <><span className="camera-orb"><LoaderCircle className="spin" /></span><strong>Checking photo quality…</strong></> : preview ? <><img src={preview} alt="Meal preview" /><button className="change-photo"><ImagePlus size={16} /> Change photo</button></> : <><span className="camera-orb"><Camera /></span><strong>Take one meal photo</strong><p>About 45°, good light, full plate rim visible</p><button className="secondary"><ImagePlus size={17} /> Take photo</button><em className="upload-optional">Optional — you can just describe the meal below</em></>}
+              <input ref={galleryInput} hidden type="file" accept="image/*" onChange={(e) => chooseImage(e.target.files?.[0])} />
+              {preparingImage ? <><span className="camera-orb"><LoaderCircle className="spin" /></span><strong>Checking photo quality…</strong></> : preview ? <><img src={preview} alt="Meal preview" /><button className="change-photo"><ImagePlus size={16} /> Change photo</button></> : <><span className="camera-orb"><Camera /></span><strong>Take one meal photo</strong><p>About 45°, good light, full plate rim visible</p><button className="secondary"><ImagePlus size={17} /> Take photo</button><button className="ghost pick-gallery" onClick={(e) => { e.stopPropagation(); galleryInput.current?.click(); }}><Images size={15} /> Choose from gallery</button><em className="upload-optional">Optional — you can just describe the meal below</em></>}
             </div>
             {capture && <div className={`capture-quality ${capture.qualityScore >= 70 ? "good" : capture.qualityScore >= 45 ? "usable" : "poor"}`}><span>{capture.qualityScore >= 70 ? <Check size={17} /> : <Info size={17} />}</span><div><strong>{capture.qualityScore >= 70 ? "Photo quality looks good" : capture.qualityScore >= 45 ? "Photo is usable" : "Retake recommended"}</strong><small>{capture.issues.length ? capture.issues.join(" · ") : `${capture.width}×${capture.height} · lighting and sharpness passed`}</small></div></div>}
             {preview && <div className="scale-choice">

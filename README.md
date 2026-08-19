@@ -172,7 +172,7 @@ If you would rather use a real identity provider with MFA, Cloudflare Access (fr
 
 Visit [macro.montagnertudor.org](https://macro.montagnertudor.org) in Safari, sign in, then use the Share button → **Add to Home Screen** for an app-like launcher.
 
-Mobile Safari will offer the rear camera when you tap **Take photo**. Use the `1×` camera, photograph the plate from about 45 degrees, and keep the full outer rim visible. The product intentionally uses one ordinary RGB photo, your saved plate size, editable portions, and learned preparation memories.
+Mobile Safari will offer the rear camera when you tap **Take photo**, or the photo library via **Choose from gallery** — iOS treats the `capture` attribute as camera-only, so each route needs its own control. Use the `1×` camera, photograph the plate from about 45 degrees, and keep the full outer rim visible. The product intentionally uses one ordinary RGB photo, your saved plate size, editable portions, and learned preparation memories.
 
 ## The plate reference
 
@@ -195,7 +195,7 @@ Because nothing was seen, **the ranges are deliberately wider**: the server floo
 
 ## Progress photos
 
-**Progress → Progress photos.** Front, side and back poses, grouped by the day they were taken, plus a Compare view putting your first and latest of a pose side by side. Your latest weight check-in is attached automatically. Photos are downscaled to 1600px and re-encoded through a canvas, which strips the EXIF block — iPhone photos carry GPS coordinates there and nothing upstream removes them.
+**Progress → Progress photos.** Front, side and back poses, added from the **camera or the photo library**, grouped by the day they were taken, plus a Compare view putting your first and latest of a pose side by side. Your latest weight check-in is attached automatically. Photos are downscaled to 1600px and re-encoded through a canvas, which strips the EXIF block — iPhone photos carry GPS coordinates there and nothing upstream removes them.
 
 They sit behind **a second passphrase**, set as its own `PHOTO_PASSPHRASE` Worker secret and independent of the one that signs you in — knowing the app passphrase does not open the photos, and the photo passphrase cannot sign you in. If `PHOTO_PASSPHRASE` is unset it falls back to `APP_PASSWORD`. This check is separate from the 30-day session. Being signed in is not enough: without a valid unlock the Worker refuses to list the photos or serve a single image, so this is not a blur that devtools defeats. The unlock lasts 15 minutes, is dropped when the browser closes, and ends immediately when you press **Lock**. It is signed with a different key from the session cookie, so a session cookie cannot be replayed as an unlock. Failed unlock attempts are rate-limited two ways: 8 per IP per 15 minutes, and — because a short PIN has a tiny keyspace that per-IP limits do nothing to protect — **20 failures globally per hour**, across every address at once. Both are keyed separately from sign-in, so fumbling here can never lock you out of the app. The trade-off is that anyone who can reach the endpoint can deliberately exhaust the global budget and seal the photos for an hour; the limit is set high enough that ordinary mistyping never trips it.
 
