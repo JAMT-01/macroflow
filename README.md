@@ -36,6 +36,8 @@ Macroflow used to be local-first, with SQLite and photos on a home server. It no
 
 Everything is behind a passphrase login (see below). The Worker runs before the static assets on every path, so the app shell, the API, and the meal photos are all gated — a signed-out visitor gets the login page and nothing else.
 
+Working on the code? Start with **[ENGINEERING.md](ENGINEERING.md)** — architecture, data model, invariants, and the traps that have cost real hours here.
+
 ## Requirements
 
 - [Node.js 22 or newer](https://nodejs.org/) and [pnpm](https://pnpm.io/installation)
