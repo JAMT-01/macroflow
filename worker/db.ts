@@ -5,6 +5,7 @@ export type Env = {
   PHOTOS: KVNamespace;
   ASSETS: Fetcher;
   APP_PASSWORD?: string;
+  PHOTO_PASSPHRASE?: string;
   OPENROUTER_API_KEY?: string;
   OPENROUTER_MODEL?: string;
   TELEGRAM_WEBHOOK_SECRET?: string;

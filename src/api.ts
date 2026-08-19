@@ -36,7 +36,7 @@ export const api = {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ analysis, message })
   }),
   memories: () => request<MealMemory[]>("/api/memories"),
-  progressState: () => request<{ unlocked: boolean; unlockMinutes: number }>("/api/progress/state"),
+  progressState: () => request<{ unlocked: boolean; unlockMinutes: number; separateSecret: boolean }>("/api/progress/state"),
   unlockPhotos: (password: string) => request<{ unlocked: boolean; unlockMinutes: number }>("/api/progress/unlock", {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ password })
   }),

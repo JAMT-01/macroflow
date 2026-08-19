@@ -12,6 +12,17 @@ import type { Env } from "./db.js";
 const COOKIE = "mf_session";
 const UNLOCK_COOKIE = "mf_photos";
 const UNLOCK_MINUTES = 15;
+/*
+ * A photo passphrase is often a short PIN, whose keyspace is small enough that
+ * per-IP limits alone mean nothing: an attacker with a few hundred proxies gets
+ * hundreds of guesses a minute. GLOBAL_FAILURES caps attempts across every IP,
+ * which is what actually bounds the search. The cost is that someone who can
+ * reach the unlock endpoint can deliberately exhaust it and keep the owner out
+ * for an hour, so it is set high enough that ordinary fumbling never trips it.
+ */
+const GLOBAL_FAILURES = 20;
+const GLOBAL_WINDOW_MINUTES = 60;
+const GLOBAL_KEY = "|photos-global";
 const SESSION_DAYS = 30;
 const MAX_FAILURES = 8;
 const LOCKOUT_MINUTES = 15;
@@ -116,6 +127,42 @@ export async function hasPhotoUnlock(request: Request, password: string) {
 }
 
 export const unlockMinutes = UNLOCK_MINUTES;
+
+/** The photo secret, falling back to the app passphrase when none is set. */
+export function photoSecret(env: Env) {
+  return env.PHOTO_PASSPHRASE || env.APP_PASSWORD || "";
+}
+
+export function hasSeparatePhotoSecret(env: Env) {
+  return Boolean(env.PHOTO_PASSPHRASE);
+}
+
+export async function isGloballyLockedOut(env: Env) {
+  const row = await env.DB.prepare("SELECT failures, window_started_at, locked_until FROM login_attempts WHERE ip = ?")
+    .bind(GLOBAL_KEY).first<{ failures: number; window_started_at: string; locked_until: string | null }>();
+  if (!row?.locked_until) return false;
+  return new Date(row.locked_until).getTime() > Date.now();
+}
+
+export async function recordGlobalFailure(env: Env) {
+  const now = Date.now();
+  const windowStart = new Date(now - GLOBAL_WINDOW_MINUTES * 60 * 1000).toISOString();
+  const row = await env.DB.prepare("SELECT failures, window_started_at FROM login_attempts WHERE ip = ?")
+    .bind(GLOBAL_KEY).first<{ failures: number; window_started_at: string }>();
+
+  const withinWindow = row && row.window_started_at > windowStart;
+  const failures = withinWindow ? row.failures + 1 : 1;
+  const lockedUntil = failures >= GLOBAL_FAILURES ? new Date(now + GLOBAL_WINDOW_MINUTES * 60 * 1000).toISOString() : null;
+
+  await env.DB.prepare(
+    `INSERT INTO login_attempts (ip, failures, window_started_at, locked_until) VALUES (?, ?, ?, ?)
+     ON CONFLICT(ip) DO UPDATE SET failures = excluded.failures, window_started_at = excluded.window_started_at, locked_until = excluded.locked_until`
+  ).bind(GLOBAL_KEY, failures, withinWindow ? row.window_started_at : new Date(now).toISOString(), lockedUntil).run();
+}
+
+export async function clearGlobalFailures(env: Env) {
+  await env.DB.prepare("DELETE FROM login_attempts WHERE ip = ?").bind(GLOBAL_KEY).run();
+}
 
 /**
  * Brute-force protection, keyed by client IP in D1. KV would burn the free

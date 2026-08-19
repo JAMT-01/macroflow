@@ -5,8 +5,9 @@ import type { CaptureMetadata, MealAnalysis, ScaleReference } from "../shared/an
 import { analyzeWithConfiguredProvider, getAiStatus, refineAnalysis } from "./analysis.js";
 import { checkReminders, handleTelegramUpdate, registerWebhook } from "./telegram.js";
 import {
-  clearFailures, clearSessionCookie, clearUnlockCookie, createSessionCookie, createUnlockCookie,
-  hasPhotoUnlock, hasValidSession, isLockedOut, loginPage, recordFailure, unlockMinutes, verifyPassword
+  clearFailures, clearGlobalFailures, clearSessionCookie, clearUnlockCookie, createSessionCookie,
+  createUnlockCookie, hasPhotoUnlock, hasSeparatePhotoSecret, hasValidSession, isGloballyLockedOut,
+  isLockedOut, loginPage, photoSecret, recordFailure, recordGlobalFailure, unlockMinutes, verifyPassword
 } from "./auth.js";
 import {
   deleteAppSecret, deletePhoto, getOpenRouterApiKey, getOpenRouterKeySource, getPhoto, getSettings,
@@ -14,6 +15,43 @@ import {
 } from "./db.js";
 
 const app = new Hono<{ Bindings: Env }>();
+
+/**
+ * Sent on every response, assets included.
+ *
+ * Referrer-Policy matters most here: without it, following any external link
+ * would put the current URL — potentially a /progress-photos/<uuid> — into
+ * another site's logs. frame-ancestors blocks clickjacking, and CORP stops
+ * another origin embedding a response even if a cookie ever did ride along.
+ * style-src needs 'unsafe-inline' for React's style attributes and the login
+ * page's inline block; the font hosts are the ones styles.css imports.
+ */
+const SECURITY_HEADERS: Record<string, string> = {
+  "referrer-policy": "same-origin",
+  "x-content-type-options": "nosniff",
+  "cross-origin-resource-policy": "same-origin",
+  "permissions-policy": "geolocation=(), microphone=(), interest-cohort=()",
+  "content-security-policy": [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' blob: data:",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "form-action 'self'",
+    "frame-ancestors 'none'"
+  ].join("; ")
+};
+
+app.use("*", async (c, next) => {
+  await next();
+  // Asset responses are immutable, so rebuild rather than mutate in place.
+  const headers = new Headers(c.res.headers);
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) headers.set(name, value);
+  c.res = new Response(c.res.body, { status: c.res.status, statusText: c.res.statusText, headers });
+});
 
 /**
  * Paths that must stay reachable without a session.
@@ -415,34 +453,43 @@ app.get("/api/my-foods", async (c) => {
  * reloads, which would bounce you to the login screen instead of the prompt.
  */
 async function requireUnlock(c: { env: Env; req: { raw: Request } }) {
-  const password = c.env.APP_PASSWORD;
-  if (!password) return false;
-  return hasPhotoUnlock(c.req.raw, password);
+  const secret = photoSecret(c.env);
+  if (!secret) return false;
+  return hasPhotoUnlock(c.req.raw, secret);
 }
 
 const lockedResponse = { error: "Progress photos are locked", locked: true } as const;
 
-app.get("/api/progress/state", async (c) => c.json({ unlocked: await requireUnlock(c), unlockMinutes }));
+app.get("/api/progress/state", async (c) => c.json({
+  unlocked: await requireUnlock(c),
+  unlockMinutes,
+  separateSecret: hasSeparatePhotoSecret(c.env)
+}));
 
 app.post("/api/progress/unlock", async (c) => {
-  const password = c.env.APP_PASSWORD;
-  if (!password) return c.json({ error: "No passphrase is configured" }, 503);
+  const secret = photoSecret(c.env);
+  if (!secret) return c.json({ error: "No passphrase is configured" }, 503);
 
-  // Shares the lockout table with sign-in but under its own key, so failed
-  // unlock attempts cannot lock you out of the app itself.
+  // Two limits. The per-IP one shares the lockout table with sign-in but under
+  // its own key, so failed unlocks cannot lock you out of the app itself. The
+  // global one is what actually bounds a short PIN, since per-IP limits are
+  // meaningless to an attacker spreading guesses across many addresses.
   const ip = `${clientIp(c)}|photos`;
   if (await isLockedOut(c.env, ip)) return c.json({ error: "Too many attempts. Try again in 15 minutes." }, 429);
+  if (await isGloballyLockedOut(c.env)) return c.json({ error: "Too many failed attempts across the internet. Photos are sealed for an hour." }, 429);
 
   const body = await c.req.json<{ password?: string }>().catch(() => ({ password: "" }));
-  if (!verifyPassword(String(body.password || ""), password)) {
+  if (!verifyPassword(String(body.password || ""), secret)) {
     const { remaining } = await recordFailure(c.env, ip);
+    await recordGlobalFailure(c.env);
     return c.json({
       error: remaining > 0 ? `That passphrase is not right. ${remaining} attempt${remaining === 1 ? "" : "s"} left.` : "Too many attempts. Try again in 15 minutes."
     }, 403);
   }
 
   await clearFailures(c.env, ip);
-  c.header("set-cookie", await createUnlockCookie(password));
+  await clearGlobalFailures(c.env);
+  c.header("set-cookie", await createUnlockCookie(secret));
   return c.json({ unlocked: true, unlockMinutes });
 });
 

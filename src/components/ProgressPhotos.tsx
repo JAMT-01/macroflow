@@ -15,6 +15,7 @@ function niceDate(takenDate: string) {
 
 export function ProgressPhotos({ suggestedWeight }: { suggestedWeight: number }) {
   const [unlockMinutes, setUnlockMinutes] = useState(15);
+  const [separateSecret, setSeparateSecret] = useState(false);
   const [unlocked, setUnlocked] = useState<boolean | null>(null);
   const [passphrase, setPassphrase] = useState("");
   const [unlocking, setUnlocking] = useState(false);
@@ -26,7 +27,7 @@ export function ProgressPhotos({ suggestedWeight }: { suggestedWeight: number })
   const [error, setError] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { api.progressState().then((state) => { setUnlocked(state.unlocked); setUnlockMinutes(state.unlockMinutes); }).catch(() => setUnlocked(false)); }, []);
+  useEffect(() => { api.progressState().then((state) => { setUnlocked(state.unlocked); setUnlockMinutes(state.unlockMinutes); setSeparateSecret(state.separateSecret); }).catch(() => setUnlocked(false)); }, []);
   useEffect(() => {
     if (!unlocked) { setPhotos(null); return; }
     api.progressPhotos().then(setPhotos).catch(() => setPhotos([]));
@@ -102,9 +103,9 @@ export function ProgressPhotos({ suggestedWeight }: { suggestedWeight: number })
     <section className="chart-card photos-card locked">
       <div className="chart-header"><div><p className="eyebrow">BODY</p><h2>Progress photos</h2></div><span className="lock-badge"><Lock size={13} /> Locked</span></div>
       <form className="photo-unlock" onSubmit={unlock}>
-        <p>These stay locked even while you are signed in. Enter your passphrase to view them; they lock again after {unlockMinutes} minutes, when you close the browser, or whenever you tap Lock.</p>
+        <p>These stay locked even while you are signed in. Enter your {separateSecret ? "photo passphrase" : "passphrase"} to view them; they lock again after {unlockMinutes} minutes, when you close the browser, or whenever you tap Lock.</p>
         <div className="photo-unlock-row">
-          <input type="password" autoComplete="current-password" placeholder="Passphrase" value={passphrase} onChange={(e) => setPassphrase(e.target.value)} />
+          <input type="password" autoComplete="current-password" placeholder={separateSecret ? "Photo passphrase" : "Passphrase"} value={passphrase} onChange={(e) => setPassphrase(e.target.value)} />
           <button className="primary" disabled={unlocking || !passphrase}>{unlocking ? <LoaderCircle className="spin" size={16} /> : <Unlock size={16} />} Unlock</button>
         </div>
         {error && <div className="error-banner">{error}</div>}

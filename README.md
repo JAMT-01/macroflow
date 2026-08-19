@@ -92,6 +92,10 @@ npx wrangler versions secret put OPENROUTER_API_KEY
 npx wrangler versions secret put TELEGRAM_WEBHOOK_SECRET
 ```
 
+```bash
+npx wrangler versions secret put PHOTO_PASSPHRASE
+```
+
 The dashboard is a fine alternative: **Workers & Pages → macroflow → Settings → Variables and Secrets**, which deploys on save.
 
 **4. Build and deploy.**
@@ -193,7 +197,9 @@ Because nothing was seen, **the ranges are deliberately wider**: the server floo
 
 **Progress → Progress photos.** Front, side and back poses, grouped by the day they were taken, plus a Compare view putting your first and latest of a pose side by side. Your latest weight check-in is attached automatically. Photos are downscaled to 1600px and re-encoded through a canvas, which strips the EXIF block — iPhone photos carry GPS coordinates there and nothing upstream removes them.
 
-They sit behind **a second passphrase check**, separate from the 30-day session. Being signed in is not enough: without a valid unlock the Worker refuses to list the photos or serve a single image, so this is not a blur that devtools defeats. The unlock lasts 15 minutes, is dropped when the browser closes, and ends immediately when you press **Lock**. It is signed with a different key from the session cookie, so a session cookie cannot be replayed as an unlock. Failed unlock attempts are rate-limited under their own key, so fumbling here can never lock you out of the app itself.
+They sit behind **a second passphrase**, set as its own `PHOTO_PASSPHRASE` Worker secret and independent of the one that signs you in — knowing the app passphrase does not open the photos, and the photo passphrase cannot sign you in. If `PHOTO_PASSPHRASE` is unset it falls back to `APP_PASSWORD`. This check is separate from the 30-day session. Being signed in is not enough: without a valid unlock the Worker refuses to list the photos or serve a single image, so this is not a blur that devtools defeats. The unlock lasts 15 minutes, is dropped when the browser closes, and ends immediately when you press **Lock**. It is signed with a different key from the session cookie, so a session cookie cannot be replayed as an unlock. Failed unlock attempts are rate-limited two ways: 8 per IP per 15 minutes, and — because a short PIN has a tiny keyspace that per-IP limits do nothing to protect — **20 failures globally per hour**, across every address at once. Both are keyed separately from sign-in, so fumbling here can never lock you out of the app. The trade-off is that anyone who can reach the endpoint can deliberately exhaust the global budget and seal the photos for an hour; the limit is set high enough that ordinary mistyping never trips it.
+
+Every response also carries `Content-Security-Policy`, `Referrer-Policy: same-origin`, `X-Content-Type-Options`, `Cross-Origin-Resource-Policy` and `Permissions-Policy`. The referrer policy is the one that matters most for photos: without it, following an external link would put a `/progress-photos/<uuid>` URL into someone else's logs.
 
 ## My foods
 
