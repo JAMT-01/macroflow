@@ -189,6 +189,12 @@ This takes a different prompt from the photo path, not the same one with the ima
 
 Because nothing was seen, **the ranges are deliberately wider**: the server floors the spread at 40% either side of each estimate unless you stated a weight. Quantities tighten it — “dos huevos”, “200g de pollo” — but are never required. Correct anything in the chat afterwards and it re-estimates.
 
+## Progress photos
+
+**Progress → Progress photos.** Front, side and back poses, grouped by the day they were taken, plus a Compare view putting your first and latest of a pose side by side. Your latest weight check-in is attached automatically. Photos are downscaled to 1600px and re-encoded through a canvas, which strips the EXIF block — iPhone photos carry GPS coordinates there and nothing upstream removes them.
+
+They sit behind **a second passphrase check**, separate from the 30-day session. Being signed in is not enough: without a valid unlock the Worker refuses to list the photos or serve a single image, so this is not a blur that devtools defeats. The unlock lasts 15 minutes, is dropped when the browser closes, and ends immediately when you press **Lock**. It is signed with a different key from the session cookie, so a session cookie cannot be replayed as an unlock. Failed unlock attempts are rate-limited under their own key, so fumbling here can never lock you out of the app itself.
+
 ## My foods
 
 Every food you log is kept, whatever route it arrived by — photo analysis, catalogue search, or quick add. **Log a meal → My foods** is the whole record: searchable, ordered by how often you have eaten each one, showing the portion, the calories, how many times you have logged it, and since when.

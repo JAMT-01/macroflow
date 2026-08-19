@@ -36,6 +36,11 @@ export const api = {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ analysis, message })
   }),
   memories: () => request<MealMemory[]>("/api/memories"),
+  progressState: () => request<{ unlocked: boolean; unlockMinutes: number }>("/api/progress/state"),
+  unlockPhotos: (password: string) => request<{ unlocked: boolean; unlockMinutes: number }>("/api/progress/unlock", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ password })
+  }),
+  lockPhotos: () => request<{ unlocked: boolean }>("/api/progress/lock", { method: "POST" }),
   progressPhotos: () => request<ProgressPhoto[]>("/api/progress"),
   addProgressPhoto: (image: File, pose: ProgressPose, weightKg?: number, notes?: string) => {
     const form = new FormData();

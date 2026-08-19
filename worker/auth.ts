@@ -10,6 +10,8 @@ import type { Env } from "./db.js";
  */
 
 const COOKIE = "mf_session";
+const UNLOCK_COOKIE = "mf_photos";
+const UNLOCK_MINUTES = 15;
 const SESSION_DAYS = 30;
 const MAX_FAILURES = 8;
 const LOCKOUT_MINUTES = 15;
@@ -71,6 +73,49 @@ export async function hasValidSession(request: Request, password: string) {
 export function verifyPassword(candidate: string, password: string) {
   return constantTimeEquals(candidate, password);
 }
+
+/**
+ * A second, short-lived unlock for the progress photos.
+ *
+ * Signed with a different context string from the session cookie, so a session
+ * cookie can never be replayed as an unlock. Deliberately a *browser-session*
+ * cookie with no Max-Age — closing the browser drops it — and the signed
+ * payload expires 15 minutes after it was issued regardless.
+ */
+async function signUnlock(password: string, payload: string) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(`${password}::macroflow-photos-v1`),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  return bytesToBase64Url(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload)));
+}
+
+export async function createUnlockCookie(password: string) {
+  const expiresAt = Date.now() + UNLOCK_MINUTES * 60 * 1000;
+  const value = `${expiresAt}.${await signUnlock(password, String(expiresAt))}`;
+  return `${UNLOCK_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax`;
+}
+
+export function clearUnlockCookie() {
+  return `${UNLOCK_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
+}
+
+export async function hasPhotoUnlock(request: Request, password: string) {
+  const header = request.headers.get("cookie") || "";
+  const match = header.match(new RegExp(`(?:^|;\\s*)${UNLOCK_COOKIE}=([^;]+)`));
+  if (!match) return false;
+
+  const [expiresAt, signature] = match[1].split(".");
+  if (!expiresAt || !signature) return false;
+  if (!Number.isFinite(Number(expiresAt)) || Number(expiresAt) < Date.now()) return false;
+
+  return constantTimeEquals(signature, await signUnlock(password, expiresAt));
+}
+
+export const unlockMinutes = UNLOCK_MINUTES;
 
 /**
  * Brute-force protection, keyed by client IP in D1. KV would burn the free

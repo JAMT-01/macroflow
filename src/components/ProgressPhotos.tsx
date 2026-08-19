@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Camera, ImagePlus, LoaderCircle, Trash2 } from "lucide-react";
+import { Camera, ImagePlus, Lock, LoaderCircle, Trash2, Unlock } from "lucide-react";
 import { api } from "../api";
 import { prepareProgressPhoto } from "../imageCapture";
 import type { ProgressPhoto, ProgressPose } from "../types";
@@ -14,6 +14,10 @@ function niceDate(takenDate: string) {
 }
 
 export function ProgressPhotos({ suggestedWeight }: { suggestedWeight: number }) {
+  const [unlockMinutes, setUnlockMinutes] = useState(15);
+  const [unlocked, setUnlocked] = useState<boolean | null>(null);
+  const [passphrase, setPassphrase] = useState("");
+  const [unlocking, setUnlocking] = useState(false);
   const [photos, setPhotos] = useState<ProgressPhoto[] | null>(null);
   const [pose, setPose] = useState<ProgressPose>("front");
   const [comparePose, setComparePose] = useState<ProgressPose>("front");
@@ -22,7 +26,37 @@ export function ProgressPhotos({ suggestedWeight }: { suggestedWeight: number })
   const [error, setError] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { api.progressPhotos().then(setPhotos).catch(() => setPhotos([])); }, []);
+  useEffect(() => { api.progressState().then((state) => { setUnlocked(state.unlocked); setUnlockMinutes(state.unlockMinutes); }).catch(() => setUnlocked(false)); }, []);
+  useEffect(() => {
+    if (!unlocked) { setPhotos(null); return; }
+    api.progressPhotos().then(setPhotos).catch(() => setPhotos([]));
+  }, [unlocked]);
+
+  async function unlock(event: React.FormEvent) {
+    event.preventDefault();
+    setUnlocking(true); setError("");
+    try {
+      await api.unlockPhotos(passphrase);
+      setPassphrase("");
+      setUnlocked(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not unlock");
+    } finally { setUnlocking(false); }
+  }
+
+  async function lock() {
+    await api.lockPhotos().catch(() => undefined);
+    setPhotos(null);
+    setUnlocked(false);
+  }
+
+  // The unlock expires server-side; a stale tab should show the prompt again
+  // rather than a grid of images that will 403 on their next fetch.
+  function handleLockedOut() {
+    setPhotos(null);
+    setUnlocked(false);
+    setError("That unlock expired. Enter your passphrase again.");
+  }
 
   async function addPhoto(file: File | undefined) {
     if (!file) return;
@@ -32,7 +66,8 @@ export function ProgressPhotos({ suggestedWeight }: { suggestedWeight: number })
       const saved = await api.addProgressPhoto(prepared, pose, suggestedWeight);
       setPhotos((current) => [saved, ...(current ?? [])]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save that photo");
+      const message = err instanceof Error ? err.message : "Could not save that photo";
+      if (message.includes("locked")) handleLockedOut(); else setError(message);
     } finally {
       setSaving(false);
       if (fileInput.current) fileInput.current.value = "";
@@ -61,16 +96,35 @@ export function ProgressPhotos({ suggestedWeight }: { suggestedWeight: number })
   const oldest = forCompare.at(-1);
   const newest = forCompare.length > 1 ? forCompare[0] : undefined;
 
+  if (unlocked === null) return <section className="chart-card"><div className="chart-header"><div><p className="eyebrow">BODY</p><h2>Progress photos</h2></div></div><div className="skeleton rows" /></section>;
+
+  if (!unlocked) return (
+    <section className="chart-card photos-card locked">
+      <div className="chart-header"><div><p className="eyebrow">BODY</p><h2>Progress photos</h2></div><span className="lock-badge"><Lock size={13} /> Locked</span></div>
+      <form className="photo-unlock" onSubmit={unlock}>
+        <p>These stay locked even while you are signed in. Enter your passphrase to view them; they lock again after {unlockMinutes} minutes, when you close the browser, or whenever you tap Lock.</p>
+        <div className="photo-unlock-row">
+          <input type="password" autoComplete="current-password" placeholder="Passphrase" value={passphrase} onChange={(e) => setPassphrase(e.target.value)} />
+          <button className="primary" disabled={unlocking || !passphrase}>{unlocking ? <LoaderCircle className="spin" size={16} /> : <Unlock size={16} />} Unlock</button>
+        </div>
+        {error && <div className="error-banner">{error}</div>}
+      </form>
+    </section>
+  );
+
   if (!photos) return <section className="chart-card"><div className="chart-header"><div><p className="eyebrow">BODY</p><h2>Progress photos</h2></div></div><div className="skeleton rows" /></section>;
 
   return (
     <section className="chart-card photos-card">
       <div className="chart-header">
         <div><p className="eyebrow">BODY</p><h2>Progress photos</h2></div>
-        {photos.length > 0 && <div className="photo-views">
-          <button className={view === "timeline" ? "active" : ""} onClick={() => setView("timeline")}>Timeline</button>
-          <button className={view === "compare" ? "active" : ""} onClick={() => setView("compare")}>Compare</button>
-        </div>}
+        <div className="photo-views">
+          {photos.length > 0 && <>
+            <button className={view === "timeline" ? "active" : ""} onClick={() => setView("timeline")}>Timeline</button>
+            <button className={view === "compare" ? "active" : ""} onClick={() => setView("compare")}>Compare</button>
+          </>}
+          <button className="lock-now" onClick={lock} title="Hide these again"><Lock size={13} /> Lock</button>
+        </div>
       </div>
 
       <div className="photo-capture">

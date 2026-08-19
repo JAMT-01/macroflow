@@ -5,8 +5,8 @@ import type { CaptureMetadata, MealAnalysis, ScaleReference } from "../shared/an
 import { analyzeWithConfiguredProvider, getAiStatus, refineAnalysis } from "./analysis.js";
 import { checkReminders, handleTelegramUpdate, registerWebhook } from "./telegram.js";
 import {
-  clearFailures, clearSessionCookie, createSessionCookie, hasValidSession, isLockedOut,
-  loginPage, recordFailure, verifyPassword
+  clearFailures, clearSessionCookie, clearUnlockCookie, createSessionCookie, createUnlockCookie,
+  hasPhotoUnlock, hasValidSession, isLockedOut, loginPage, recordFailure, unlockMinutes, verifyPassword
 } from "./auth.js";
 import {
   deleteAppSecret, deletePhoto, getOpenRouterApiKey, getOpenRouterKeySource, getPhoto, getSettings,
@@ -405,6 +405,52 @@ app.get("/api/my-foods", async (c) => {
 
 /* ---------------------------------------------------------- progress photos */
 
+/**
+ * Body photos sit behind a second passphrase check, separate from the 30-day
+ * session. A blur in the browser would be theatre — the bytes would still be in
+ * the DOM and one URL away — so the barrier is enforced here: without a valid
+ * unlock cookie the Worker refuses to list or serve them at all.
+ *
+ * 403 rather than 401 matters: the client treats 401 as an expired session and
+ * reloads, which would bounce you to the login screen instead of the prompt.
+ */
+async function requireUnlock(c: { env: Env; req: { raw: Request } }) {
+  const password = c.env.APP_PASSWORD;
+  if (!password) return false;
+  return hasPhotoUnlock(c.req.raw, password);
+}
+
+const lockedResponse = { error: "Progress photos are locked", locked: true } as const;
+
+app.get("/api/progress/state", async (c) => c.json({ unlocked: await requireUnlock(c), unlockMinutes }));
+
+app.post("/api/progress/unlock", async (c) => {
+  const password = c.env.APP_PASSWORD;
+  if (!password) return c.json({ error: "No passphrase is configured" }, 503);
+
+  // Shares the lockout table with sign-in but under its own key, so failed
+  // unlock attempts cannot lock you out of the app itself.
+  const ip = `${clientIp(c)}|photos`;
+  if (await isLockedOut(c.env, ip)) return c.json({ error: "Too many attempts. Try again in 15 minutes." }, 429);
+
+  const body = await c.req.json<{ password?: string }>().catch(() => ({ password: "" }));
+  if (!verifyPassword(String(body.password || ""), password)) {
+    const { remaining } = await recordFailure(c.env, ip);
+    return c.json({
+      error: remaining > 0 ? `That passphrase is not right. ${remaining} attempt${remaining === 1 ? "" : "s"} left.` : "Too many attempts. Try again in 15 minutes."
+    }, 403);
+  }
+
+  await clearFailures(c.env, ip);
+  c.header("set-cookie", await createUnlockCookie(password));
+  return c.json({ unlocked: true, unlockMinutes });
+});
+
+app.post("/api/progress/lock", (c) => {
+  c.header("set-cookie", clearUnlockCookie());
+  return c.json({ unlocked: false });
+});
+
 const POSES = ["front", "side", "back"] as const;
 
 const serializeProgressPhoto = (row: Record<string, unknown>) => ({
@@ -418,6 +464,7 @@ const serializeProgressPhoto = (row: Record<string, unknown>) => ({
 });
 
 app.get("/api/progress", async (c) => {
+  if (!await requireUnlock(c)) return c.json(lockedResponse, 403);
   const rows = await c.env.DB.prepare(
     "SELECT id, taken_at, taken_date, pose, image_path, weight_kg, notes FROM progress_photos ORDER BY taken_at DESC LIMIT 500"
   ).all<Record<string, unknown>>();
@@ -425,6 +472,7 @@ app.get("/api/progress", async (c) => {
 });
 
 app.post("/api/progress", async (c) => {
+  if (!await requireUnlock(c)) return c.json(lockedResponse, 403);
   const form = await c.req.formData();
   const image = form.get("image");
   if (!image || typeof image === "string") return c.json({ error: "Attach a photo" }, 400);
@@ -461,6 +509,7 @@ app.post("/api/progress", async (c) => {
 });
 
 app.delete("/api/progress/:id", async (c) => {
+  if (!await requireUnlock(c)) return c.json(lockedResponse, 403);
   const id = c.req.param("id");
   const row = await c.env.DB.prepare("SELECT image_path FROM progress_photos WHERE id = ?").bind(id).first<{ image_path: string }>();
   if (!row) return c.json({ error: "Photo not found" }, 404);
@@ -470,6 +519,7 @@ app.delete("/api/progress/:id", async (c) => {
 });
 
 app.get("/progress-photos/:key", async (c) => {
+  if (!await requireUnlock(c)) return c.json(lockedResponse, 403);
   const photo = await getPhoto(c.env, `progress-photos/${c.req.param("key")}`);
   if (!photo) return c.notFound();
   return c.body(photo.bytes, 200, {
