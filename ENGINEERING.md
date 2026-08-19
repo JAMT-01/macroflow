@@ -17,14 +17,56 @@ Macroflow is a single-user macro tracker for one person in Argentina. Photograph
 
 ```bash
 pnpm install
-cp .dev.vars.example .dev.vars
+```
+
+```bash
+pnpm bootstrap
+```
+
+```bash
 pnpm d1:migrate:local
+```
+
+```bash
 pnpm dev
 ```
 
-Fill in `APP_PASSWORD` in `.dev.vars` at minimum. Vite serves the UI on `:5173` with HMR and proxies `/api` to `wrangler dev` on `:8787`. Local D1 and KV are emulated under `.wrangler/` — throwaway state, never production. Run `pnpm check && pnpm test` before pushing.
+`pnpm bootstrap` generates `.dev.vars` with a random local passphrase and prints it. **You do not need any production credential to develop.** Vite serves the UI on `:5173` with HMR and proxies `/api` to `wrangler dev` on `:8787`. Local D1 and KV are emulated under `.wrangler/` — throwaway state, never production. Run `pnpm check && pnpm test` before pushing.
 
 > **Wrangler is a local devDependency.** Every command needs `npx` (or a `pnpm` script). A bare `wrangler …` fails with "not recognized".
+
+---
+
+### Credentials: what you need, and what you do not
+
+**Local development needs nothing from anyone.** `pnpm bootstrap` generates a local passphrase; with no OpenRouter key the app falls back to the local food matcher, so every screen still works. Only the model's estimates are unavailable.
+
+**Production secrets are never written down.** They live only as Worker secrets, encrypted by Cloudflare, and are not in this repo, this document, `.dev.vars.example`, or git history — deliberately, because git history is permanent and this document is shareable. Anyone who needs production access gets it from the owner directly, or sets their own.
+
+| secret | needed for | where it lives | how to get one |
+| --- | --- | --- | --- |
+| `APP_PASSWORD` | signing in | Worker secret | ask the owner, or set your own on your own deployment |
+| `PHOTO_PASSPHRASE` | body photos | Worker secret | as above; falls back to `APP_PASSWORD` when unset |
+| `OPENROUTER_API_KEY` | AI estimates | Worker secret, or D1 `app_secrets` via Settings | create your own at <https://openrouter.ai/settings/keys> — do not reuse production's |
+| `TELEGRAM_WEBHOOK_SECRET` | Telegram | Worker secret | generate one: `openssl rand -hex 32` |
+
+To read which secrets a deployment *has* (names only, never values):
+
+```bash
+npx wrangler secret list
+```
+
+Setting or rotating any of them is §9 — and mind the versions trap there.
+
+To inspect production data without production credentials in hand:
+
+```bash
+npx wrangler d1 execute macroflow --remote --command "SELECT COUNT(*) FROM meals;"
+```
+
+That authenticates through `wrangler login` (your own Cloudflare account access), which is the right boundary: account access is auditable and revocable, a pasted passphrase is neither.
+
+**If a credential is ever pasted into a chat, screenshot, or ticket, rotate it.** It cannot be un-shared.
 
 ---
 

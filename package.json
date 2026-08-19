@@ -11,6 +11,7 @@
     "deploy": "pnpm build && wrangler deploy",
     "d1:migrate": "wrangler d1 migrations apply macroflow --remote",
     "d1:migrate:local": "wrangler d1 migrations apply macroflow --local",
+    "bootstrap": "node scripts/bootstrap-dev.mjs",
     "d1:seed": "tsx scripts/generate-seed-migration.ts",
     "d1:export-local": "tsx scripts/export-local-to-d1.ts",
     "tail": "wrangler tail"
