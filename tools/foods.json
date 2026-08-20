@@ -1,0 +1,474 @@
+[
+  {
+    "results": [
+      {
+        "id": 1,
+        "name": "Chicken breast, cooked",
+        "aliases": "[\"chicken\",\"chicken breast\",\"pollo\",\"pechuga\",\"pechuga de pollo\"]",
+        "calories": 165,
+        "protein": 31,
+        "carbs": 0,
+        "fiber": 0,
+        "fat": 3.6
+      },
+      {
+        "id": 2,
+        "name": "Chicken thigh, cooked",
+        "aliases": "[\"chicken thigh\",\"muslo\",\"muslo de pollo\"]",
+        "calories": 209,
+        "protein": 26,
+        "carbs": 0,
+        "fiber": 0,
+        "fat": 10.9
+      },
+      {
+        "id": 3,
+        "name": "Lean beef steak",
+        "aliases": "[\"steak\",\"beef\",\"carne\",\"bife\",\"asado\"]",
+        "calories": 217,
+        "protein": 26.1,
+        "carbs": 0,
+        "fiber": 0,
+        "fat": 11.8
+      },
+      {
+        "id": 4,
+        "name": "Ground beef, 90% lean",
+        "aliases": "[\"ground beef\",\"minced beef\",\"carne picada\",\"hamburger\"]",
+        "calories": 217,
+        "protein": 26.1,
+        "carbs": 0,
+        "fiber": 0,
+        "fat": 11.8
+      },
+      {
+        "id": 5,
+        "name": "Salmon, cooked",
+        "aliases": "[\"salmon\",\"salmón\"]",
+        "calories": 206,
+        "protein": 22.1,
+        "carbs": 0,
+        "fiber": 0,
+        "fat": 12.4
+      },
+      {
+        "id": 6,
+        "name": "Tuna in water, drained",
+        "aliases": "[\"tuna\",\"atun\",\"atún\"]",
+        "calories": 116,
+        "protein": 25.5,
+        "carbs": 0,
+        "fiber": 0,
+        "fat": 0.8
+      },
+      {
+        "id": 7,
+        "name": "Whole egg",
+        "aliases": "[\"egg\",\"eggs\",\"huevo\",\"huevos\"]",
+        "calories": 143,
+        "protein": 12.6,
+        "carbs": 0.7,
+        "fiber": 0,
+        "fat": 9.5
+      },
+      {
+        "id": 8,
+        "name": "Egg whites",
+        "aliases": "[\"egg white\",\"egg whites\",\"claras\",\"clara de huevo\"]",
+        "calories": 52,
+        "protein": 10.9,
+        "carbs": 0.7,
+        "fiber": 0,
+        "fat": 0.2
+      },
+      {
+        "id": 9,
+        "name": "White rice, cooked",
+        "aliases": "[\"rice\",\"white rice\",\"arroz\",\"arroz blanco\"]",
+        "calories": 130,
+        "protein": 2.7,
+        "carbs": 28.2,
+        "fiber": 0.4,
+        "fat": 0.3
+      },
+      {
+        "id": 10,
+        "name": "Brown rice, cooked",
+        "aliases": "[\"brown rice\",\"arroz integral\"]",
+        "calories": 123,
+        "protein": 2.7,
+        "carbs": 25.6,
+        "fiber": 1.6,
+        "fat": 1
+      },
+      {
+        "id": 11,
+        "name": "Pasta, cooked",
+        "aliases": "[\"pasta\",\"spaghetti\",\"noodles\",\"fideos\",\"tallarines\"]",
+        "calories": 157,
+        "protein": 5.8,
+        "carbs": 30.9,
+        "fiber": 1.8,
+        "fat": 0.9
+      },
+      {
+        "id": 12,
+        "name": "Rolled oats, cooked",
+        "aliases": "[\"oats\",\"oatmeal\",\"avena\"]",
+        "calories": 71,
+        "protein": 2.5,
+        "carbs": 12,
+        "fiber": 1.7,
+        "fat": 1.5
+      },
+      {
+        "id": 13,
+        "name": "Potato, baked",
+        "aliases": "[\"potato\",\"potatoes\",\"papa\",\"papas\"]",
+        "calories": 93,
+        "protein": 2.5,
+        "carbs": 21.2,
+        "fiber": 2.2,
+        "fat": 0.1
+      },
+      {
+        "id": 14,
+        "name": "Mashed potatoes",
+        "aliases": "[\"mashed potato\",\"mashed potatoes\",\"pure\",\"puré\",\"pure de papa\"]",
+        "calories": 113,
+        "protein": 2,
+        "carbs": 16.8,
+        "fiber": 1.5,
+        "fat": 4.2
+      },
+      {
+        "id": 15,
+        "name": "Sweet potato, cooked",
+        "aliases": "[\"sweet potato\",\"batata\",\"boniato\"]",
+        "calories": 90,
+        "protein": 2,
+        "carbs": 20.7,
+        "fiber": 3.3,
+        "fat": 0.2
+      },
+      {
+        "id": 16,
+        "name": "Whole wheat bread",
+        "aliases": "[\"bread\",\"toast\",\"whole wheat bread\",\"pan\",\"tostada\"]",
+        "calories": 247,
+        "protein": 13,
+        "carbs": 41,
+        "fiber": 7,
+        "fat": 3.4
+      },
+      {
+        "id": 17,
+        "name": "Flour tortilla",
+        "aliases": "[\"tortilla\",\"wrap\"]",
+        "calories": 312,
+        "protein": 8.3,
+        "carbs": 52.1,
+        "fiber": 3.1,
+        "fat": 8.3
+      },
+      {
+        "id": 18,
+        "name": "Quinoa, cooked",
+        "aliases": "[\"quinoa\"]",
+        "calories": 120,
+        "protein": 4.4,
+        "carbs": 21.3,
+        "fiber": 2.8,
+        "fat": 1.9
+      },
+      {
+        "id": 19,
+        "name": "Lentils, cooked",
+        "aliases": "[\"lentils\",\"lentejas\"]",
+        "calories": 116,
+        "protein": 9,
+        "carbs": 20.1,
+        "fiber": 7.9,
+        "fat": 0.4
+      },
+      {
+        "id": 20,
+        "name": "Black beans, cooked",
+        "aliases": "[\"black beans\",\"beans\",\"porotos\",\"frijoles\"]",
+        "calories": 132,
+        "protein": 8.9,
+        "carbs": 23.7,
+        "fiber": 8.7,
+        "fat": 0.5
+      },
+      {
+        "id": 21,
+        "name": "Chickpeas, cooked",
+        "aliases": "[\"chickpeas\",\"garbanzos\"]",
+        "calories": 164,
+        "protein": 8.9,
+        "carbs": 27.4,
+        "fiber": 7.6,
+        "fat": 2.6
+      },
+      {
+        "id": 22,
+        "name": "Greek yogurt, nonfat",
+        "aliases": "[\"greek yogurt\",\"yogurt\",\"yoghurt\",\"yogur griego\",\"yogur\"]",
+        "calories": 59,
+        "protein": 10.3,
+        "carbs": 3.6,
+        "fiber": 0,
+        "fat": 0.4
+      },
+      {
+        "id": 23,
+        "name": "Whole milk",
+        "aliases": "[\"milk\",\"whole milk\",\"leche\"]",
+        "calories": 61,
+        "protein": 3.2,
+        "carbs": 4.8,
+        "fiber": 0,
+        "fat": 3.3
+      },
+      {
+        "id": 24,
+        "name": "Mozzarella cheese",
+        "aliases": "[\"mozzarella\",\"cheese\",\"queso\",\"queso mozzarella\"]",
+        "calories": 280,
+        "protein": 28,
+        "carbs": 3.1,
+        "fiber": 0,
+        "fat": 17
+      },
+      {
+        "id": 25,
+        "name": "Avocado",
+        "aliases": "[\"avocado\",\"palta\"]",
+        "calories": 160,
+        "protein": 2,
+        "carbs": 8.5,
+        "fiber": 6.7,
+        "fat": 14.7
+      },
+      {
+        "id": 26,
+        "name": "Olive oil",
+        "aliases": "[\"oil\",\"olive oil\",\"aceite\",\"aceite de oliva\"]",
+        "calories": 884,
+        "protein": 0,
+        "carbs": 0,
+        "fiber": 0,
+        "fat": 100
+      },
+      {
+        "id": 27,
+        "name": "Sunflower oil",
+        "aliases": "[\"sunflower oil\",\"aceite de girasol\"]",
+        "calories": 884,
+        "protein": 0,
+        "carbs": 0,
+        "fiber": 0,
+        "fat": 100
+      },
+      {
+        "id": 28,
+        "name": "Butter",
+        "aliases": "[\"butter\",\"manteca\",\"mantequilla\"]",
+        "calories": 717,
+        "protein": 0.9,
+        "carbs": 0.1,
+        "fiber": 0,
+        "fat": 81.1
+      },
+      {
+        "id": 29,
+        "name": "Peanut butter",
+        "aliases": "[\"peanut butter\",\"mantequilla de mani\",\"mantequilla de maní\"]",
+        "calories": 588,
+        "protein": 25,
+        "carbs": 20,
+        "fiber": 6,
+        "fat": 50
+      },
+      {
+        "id": 30,
+        "name": "Almonds",
+        "aliases": "[\"almonds\",\"almendras\"]",
+        "calories": 579,
+        "protein": 21.2,
+        "carbs": 21.6,
+        "fiber": 12.5,
+        "fat": 49.9
+      },
+      {
+        "id": 31,
+        "name": "Banana",
+        "aliases": "[\"banana\",\"platano\",\"plátano\"]",
+        "calories": 89,
+        "protein": 1.1,
+        "carbs": 22.8,
+        "fiber": 2.6,
+        "fat": 0.3
+      },
+      {
+        "id": 32,
+        "name": "Apple",
+        "aliases": "[\"apple\",\"manzana\"]",
+        "calories": 52,
+        "protein": 0.3,
+        "carbs": 13.8,
+        "fiber": 2.4,
+        "fat": 0.2
+      },
+      {
+        "id": 33,
+        "name": "Strawberries",
+        "aliases": "[\"strawberry\",\"strawberries\",\"frutilla\",\"frutillas\"]",
+        "calories": 32,
+        "protein": 0.7,
+        "carbs": 7.7,
+        "fiber": 2,
+        "fat": 0.3
+      },
+      {
+        "id": 34,
+        "name": "Blueberries",
+        "aliases": "[\"blueberry\",\"blueberries\",\"arandanos\",\"arándanos\"]",
+        "calories": 57,
+        "protein": 0.7,
+        "carbs": 14.5,
+        "fiber": 2.4,
+        "fat": 0.3
+      },
+      {
+        "id": 35,
+        "name": "Broccoli, cooked",
+        "aliases": "[\"broccoli\",\"brócoli\"]",
+        "calories": 35,
+        "protein": 2.4,
+        "carbs": 7.2,
+        "fiber": 3.3,
+        "fat": 0.4
+      },
+      {
+        "id": 36,
+        "name": "Mixed green salad",
+        "aliases": "[\"salad\",\"green salad\",\"mixed salad\",\"ensalada\",\"ensalada verde\"]",
+        "calories": 25,
+        "protein": 1.6,
+        "carbs": 4.5,
+        "fiber": 1.8,
+        "fat": 0.3
+      },
+      {
+        "id": 37,
+        "name": "Tomato",
+        "aliases": "[\"tomato\",\"tomatoes\",\"tomate\",\"tomates\"]",
+        "calories": 18,
+        "protein": 0.9,
+        "carbs": 3.9,
+        "fiber": 1.2,
+        "fat": 0.2
+      },
+      {
+        "id": 38,
+        "name": "Whey protein powder",
+        "aliases": "[\"whey\",\"protein powder\",\"protein shake\",\"proteina\",\"proteína\"]",
+        "calories": 400,
+        "protein": 80,
+        "carbs": 10,
+        "fiber": 1,
+        "fat": 6.7
+      },
+      {
+        "id": 39,
+        "name": "Chicken milanesa",
+        "aliases": "[\"milanesa\",\"chicken milanesa\",\"milanesa de pollo\"]",
+        "calories": 245,
+        "protein": 23,
+        "carbs": 14,
+        "fiber": 1.1,
+        "fat": 10.5
+      },
+      {
+        "id": 40,
+        "name": "Beef empanada, baked",
+        "aliases": "[\"empanada\",\"beef empanada\",\"empanada de carne\"]",
+        "calories": 254,
+        "protein": 10.4,
+        "carbs": 26.5,
+        "fiber": 1.5,
+        "fat": 11.8
+      },
+      {
+        "id": 41,
+        "name": "Dulce de leche",
+        "aliases": "[\"dulce de leche\"]",
+        "calories": 315,
+        "protein": 6.8,
+        "carbs": 55,
+        "fiber": 0,
+        "fat": 7.3
+      },
+      {
+        "id": 42,
+        "name": "Chia seeds",
+        "aliases": "[\"chia\",\"chia seeds\",\"semillas de chia\",\"semillas de chía\"]",
+        "calories": 486,
+        "protein": 16.5,
+        "carbs": 42.1,
+        "fiber": 34.4,
+        "fat": 30.7
+      },
+      {
+        "id": 43,
+        "name": "Sardines, canned in oil, drained",
+        "aliases": "[\"sardinas\",\"sardinas en lata\",\"sardines\",\"sardina\"]",
+        "calories": 208,
+        "protein": 24.6,
+        "carbs": 0,
+        "fiber": 0,
+        "fat": 11.5
+      },
+      {
+        "id": 44,
+        "name": "Psyllium husk",
+        "aliases": "[\"psyllium\",\"psilio\",\"cascara de psyllium\",\"cáscara de psyllium\",\"plantago ovata\"]",
+        "calories": 200,
+        "protein": 0,
+        "carbs": 85,
+        "fiber": 80,
+        "fat": 0.5
+      },
+      {
+        "id": 45,
+        "name": "Raspberries",
+        "aliases": "[\"frambuesas\",\"frambuesa\",\"raspberries\"]",
+        "calories": 52,
+        "protein": 1.2,
+        "carbs": 11.9,
+        "fiber": 6.5,
+        "fat": 0.7
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "ENAM",
+      "served_by_colo": "EWR",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.4675
+      },
+      "duration": 0.4675,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 163840,
+      "rows_read": 45,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

@@ -1,0 +1,23 @@
+{
+  // PARTIAL CONFIG — D1 operations only.
+  //
+  // This intentionally omits `main` and `assets`. The deployed Worker is
+  // currently the ONLY copy of the source code (see macroflow-kb.md §9), so a
+  // config complete enough to run `wrangler deploy` from could overwrite the
+  // live Worker with an empty or assets-only build and destroy it.
+  //
+  // Leaving those keys out makes `wrangler deploy` fail fast instead.
+  // Restore them from macroflow-kb.md §2 once the source has been recovered
+  // and committed to git.
+  "name": "macroflow",
+  "compatibility_date": "2026-08-13",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "macroflow",
+      "database_id": "978a69cc-f981-4fa8-a136-c67b556bb643",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+# Wrangler local simulation state and cache. Never useful to share, and the
+# local D1/KV simulation under here is what produced the false "PHOTOS is empty"
+# reading recorded in macroflow-kb.md §5.
+.wrangler/
+
+node_modules/
+*.log
+
+# Wrangler credentials never live in the project, but guard against a stray copy.
+.dev.vars
+.env
+*.pem
+
+# Machine-specific: points at a session temp dir that will not exist elsewhere.
+.claude/launch.json
