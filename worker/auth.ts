@@ -224,7 +224,7 @@ export function loginPage(options: { error?: string; configured: boolean } = { c
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="theme-color" content="#172019" />
+<meta name="theme-color" content="#14120f" />
 <meta name="robots" content="noindex, nofollow" />
 <link rel="icon" href="/favicon-32.png" sizes="32x32" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -232,29 +232,37 @@ export function loginPage(options: { error?: string; configured: boolean } = { c
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Jamtytrack" />
 <title>Jamtytrack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=DM+Mono:wght@500&display=swap" rel="stylesheet" />
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
   html { touch-action:pan-x pan-y; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
-  body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px;
-    background:#172019; color:#f3f5ef; font-family:"DM Sans","Segoe UI",system-ui,sans-serif; }
+  /* The gate is the one dark screen in a light app: warm ink, lit from the top,
+     so the carrot mark and the button are the only colour on it. */
+  body { margin:0; min-height:100vh; display:grid; place-items:center; padding:32px 24px;
+    background:radial-gradient(120% 70% at 50% 0%, #1f1c17 0%, #14120f 60%) #14120f; color:#fff;
+    font-family:"DM Sans","Segoe UI",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
   form { width:min(360px,100%); display:grid; gap:14px; }
-  .mark { width:52px; height:52px; border-radius:16px; background:#c9f36a; color:#172019;
-    display:grid; place-items:center; font:800 24px/1 "Manrope",sans-serif; margin:0 auto 6px; }
-  h1 { font:700 22px/1.2 "Manrope","Segoe UI",sans-serif; margin:0; text-align:center; }
-  p.sub { margin:0 0 8px; text-align:center; color:#9ea89f; font-size:13px; }
-  label { display:grid; gap:7px; font-size:12px; font-weight:600; color:#b9c1ba; }
-  input { height:48px; border-radius:12px; border:1px solid #354137; background:#222c24;
-    color:#fff; padding:0 14px; font-size:16px; outline:0; }
-  input:focus { border-color:#c9f36a; }
-  button { height:48px; border:0; border-radius:12px; background:#c9f36a; color:#172019;
-    font:700 15px "Manrope",sans-serif; cursor:pointer; }
+  .mark { width:54px; height:54px; border-radius:18px; background:#ed7117; color:#fff;
+    display:grid; place-items:center; font:700 24px/1 "DM Sans",sans-serif; margin:0 0 20px; }
+  h1 { font:700 32px/1.05 "DM Sans","Segoe UI",sans-serif; letter-spacing:-.04em; margin:0; }
+  p.sub { margin:10px 0 10px; color:rgba(255,255,255,.55); font-size:14.5px; line-height:1.55; }
+  label { display:grid; gap:9px; font:500 10px/1 "DM Mono",ui-monospace,monospace;
+    letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.4); }
+  input { height:54px; border-radius:16px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.05);
+    color:#fff; padding:0 16px; font:400 16px "DM Sans",sans-serif; letter-spacing:normal; text-transform:none; outline:0; }
+  input:focus { border-color:#ed7117; background:rgba(255,255,255,.07); }
+  button { height:58px; border:0; border-radius:999px; background:#ed7117; color:#fff;
+    font:700 16.5px "DM Sans",sans-serif; cursor:pointer; box-shadow:0 10px 26px rgba(237,113,23,.28); margin-top:4px; }
   button:active { transform:scale(.99); }
-  .error, .notice { margin:0; font-size:13px; line-height:1.5; border-radius:10px; padding:10px 12px; }
-  .error { background:#3a2321; color:#f6c7c0; }
-  .notice { background:#2f2c1e; color:#f0e3ad; }
-  code { background:rgba(255,255,255,.1); padding:2px 6px; border-radius:5px; font-size:12px; }
-  .foot { text-align:center; color:#6f7a70; font-size:11px; margin:4px 0 0; }
+  .error, .notice { margin:0; font-size:12.5px; line-height:1.5; border-radius:16px; padding:13px 15px; }
+  .error { background:rgba(237,113,23,.14); color:#f2c9a6; }
+  .notice { background:rgba(201,162,39,.14); color:#e8d5a0; }
+  code { background:rgba(255,255,255,.1); padding:2px 6px; border-radius:6px;
+    font:500 12px "DM Mono",ui-monospace,monospace; }
+  .foot { text-align:center; color:rgba(255,255,255,.32); font-size:11px; margin:6px 0 0; }
 </style>
 </head>
 <body>

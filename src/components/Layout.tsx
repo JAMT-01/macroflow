@@ -1,14 +1,18 @@
-import { BarChart3, Camera, Home, Images, Settings as SettingsIcon, Sparkles } from "lucide-react";
+import { BarChart3, Camera, Home, Images, Plus, Settings as SettingsIcon, Sparkles } from "lucide-react";
 
 export type Tab = "today" | "progress" | "photos" | "settings";
 
+const nav = [
+  { id: "today" as const, label: "Today", icon: Home },
+  { id: "progress" as const, label: "Progress", icon: BarChart3 },
+  { id: "photos" as const, label: "Photos", icon: Images },
+  { id: "settings" as const, label: "Settings", icon: SettingsIcon }
+];
+
 export function Layout({ tab, setTab, onScan, children }: { tab: Tab; setTab: (tab: Tab) => void; onScan: () => void; children: React.ReactNode }) {
-  const nav = [
-    { id: "today" as const, label: "Today", icon: Home },
-    { id: "progress" as const, label: "Progress", icon: BarChart3 },
-    { id: "photos" as const, label: "Photos", icon: Images },
-    { id: "settings" as const, label: "Settings", icon: SettingsIcon }
-  ];
+  // The pill behind the active tab slides between cells, so the bar needs to know
+  // which cell is lit. One custom property is cheaper than measuring the DOM.
+  const activeIndex = Math.max(0, nav.findIndex((item) => item.id === tab));
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -30,13 +34,19 @@ export function Layout({ tab, setTab, onScan, children }: { tab: Tab; setTab: (t
         <div className="local-pill"><span /> Private local storage</div>
       </aside>
       <main className="main-content">{children}</main>
-      <nav className="bottom-nav">
-        <button className={tab === "today" ? "active" : ""} onClick={() => setTab("today")}><Home size={21} /><span>Today</span></button>
-        <button className={tab === "progress" ? "active" : ""} onClick={() => setTab("progress")}><BarChart3 size={21} /><span>Progress</span></button>
-        <button className="scan-fab" onClick={onScan} aria-label="Scan meal"><span className="scan-fab-icon"><Camera size={24} /></span><small>Scan</small></button>
-        <button className={tab === "photos" ? "active" : ""} onClick={() => setTab("photos")}><Images size={21} /><span>Photos</span></button>
-        <button className={tab === "settings" ? "active" : ""} onClick={() => setTab("settings")}><SettingsIcon size={21} /><span>Settings</span></button>
-      </nav>
+      {/* Floating bar: the four destinations ride in one glass pill, and capture
+          sits outside it as its own button — the action is not a destination. */}
+      <div className="mobile-bar">
+        <nav className="bottom-nav" style={{ ["--nav-index" as string]: activeIndex }}>
+          <span className="nav-pill" aria-hidden="true" />
+          {nav.map(({ id, label, icon: Icon }) => (
+            <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>
+              <Icon size={21} strokeWidth={tab === id ? 2.3 : 1.9} /><span>{label}</span>
+            </button>
+          ))}
+        </nav>
+        <button className="scan-fab" onClick={onScan} aria-label="Log a meal"><Plus size={27} strokeWidth={2.6} /></button>
+      </div>
     </div>
   );
 }

@@ -61,10 +61,10 @@ export function Today({ date, setDate, openLog, refresh, onChanged }: { date: st
         </div>
         <div className="macro-grid">
           {[
-            { label: "Protein", value: dashboard.totals.protein, target: settings.proteinTarget, color: "#f26d5b", className: "protein" },
-            { label: "Carbs", value: dashboard.totals.carbs, target: settings.carbsTarget, color: "#5c8df6", className: "carbs" },
-            { label: "Fat", value: dashboard.totals.fat, target: settings.fatTarget, color: "#9c6ade", className: "fat" },
-            { label: "Fiber", value: dashboard.totals.fiber, target: settings.fiberTarget, color: "#5f9c4a", className: "fiber" }
+            { label: "Protein", value: dashboard.totals.protein, target: settings.proteinTarget, color: "var(--accent)", className: "protein" },
+            { label: "Carbs", value: dashboard.totals.carbs, target: settings.carbsTarget, color: "var(--gold)", className: "carbs" },
+            { label: "Fat", value: dashboard.totals.fat, target: settings.fatTarget, color: "var(--blue)", className: "fat" },
+            { label: "Fiber", value: dashboard.totals.fiber, target: settings.fiberTarget, color: "var(--sage)", className: "fiber" }
           ].map((macro) => <div className={`macro-card ${macro.className}`} key={macro.label}><MacroRing value={macro.value} target={macro.target} color={macro.color} size={54} stroke={6} /><div><span>{macro.label}</span><strong>{Math.round(macro.value)}<small> / {macro.target}g</small></strong><p>{Math.max(0, Math.round(macro.target - macro.value))}g left</p></div></div>)}
         </div>
       </section>
