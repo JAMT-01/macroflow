@@ -45,12 +45,12 @@
   },
 
   "vars": {
-    "APP_URL": "https://macro.montagnertudor.org"
+    "APP_URL": "https://jamtytrack.montagnertudor.org"
   },
 
   "routes": [
     {
-      "pattern": "macro.montagnertudor.org",
+      "pattern": "jamtytrack.montagnertudor.org",
       "custom_domain": true
     }
   ]

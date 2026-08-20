@@ -53,7 +53,7 @@ export function Onboarding({ initial, onComplete }: { initial: Settings; onCompl
     <div className="onboarding">
       <div className="onboarding-art">
         <div className="orb orb-one" /><div className="orb orb-two" />
-        <div className="onboarding-brand"><span><Sparkles /></span> Macroflow</div>
+        <div className="onboarding-brand"><span><Sparkles /></span> Jamtytrack</div>
         <div className="art-copy">
           <p className="eyebrow">PRIVATE BY DEFAULT</p>
           <h1>Nutrition tracking,<br /><em>without the friction.</em></h1>

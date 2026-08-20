@@ -3,10 +3,10 @@ import { z } from "zod";
 import { addCalendarDays, dateInTimeZone, dateRangeUtc, diaryTimestamp, getTimeContext, isValidTimeZone } from "../shared/time.js";
 import type { CaptureMetadata, MealAnalysis, ScaleReference } from "../shared/analysis-core.js";
 import { analyzeWithConfiguredProvider, getAiStatus, refineAnalysis } from "./analysis.js";
-import { checkReminders, handleTelegramUpdate, registerWebhook } from "./telegram.js";
+import { checkReminders, getWebhookInfo, handleTelegramUpdate, registerWebhook } from "./telegram.js";
 import {
   clearFailures, clearGlobalFailures, clearSessionCookie, clearUnlockCookie, createSessionCookie,
-  createUnlockCookie, hasPhotoUnlock, hasSeparatePhotoSecret, hasValidSession, isGloballyLockedOut,
+  createUnlockCookie, hasPhotoUnlock, hasSeparatePhotoSecret, hasValidSession, isGloballyLockedOut, photoUnlockExpiry,
   isLockedOut, loginPage, photoSecret, recordFailure, recordGlobalFailure, unlockMinutes, verifyPassword
 } from "./auth.js";
 import {
@@ -63,18 +63,40 @@ app.use("*", async (c, next) => {
  */
 const PUBLIC_PATHS = new Set(["/api/health", "/api/auth/login", "/api/telegram/webhook"]);
 
+/**
+ * Branding, readable without a session.
+ *
+ * A deliberate narrowing of invariant 1. The home screen icon is fetched by the
+ * OS while signed out — often before any login has ever happened — so behind the
+ * gate it 401s and the PWA ends up with no icon at all, which is exactly the
+ * problem this list exists to fix. Every entry is a generated logo file or the
+ * manifest; none of them touches the diary.
+ *
+ * An explicit list, not a prefix or an extension test, so widening it has to be
+ * a deliberate edit rather than an accident.
+ */
+const PUBLIC_ASSETS = new Set([
+  "/manifest.webmanifest",
+  "/apple-touch-icon.png",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/icon-maskable-512.png",
+  "/favicon-32.png",
+  "/favicon-16.png"
+]);
+
 const clientIp = (c: { req: { header: (name: string) => string | undefined } }) =>
   c.req.header("cf-connecting-ip") || c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 
 app.use("*", async (c, next) => {
   const password = c.env.APP_PASSWORD;
   const path = new URL(c.req.url).pathname;
-  if (PUBLIC_PATHS.has(path)) return next();
+  if (PUBLIC_PATHS.has(path) || PUBLIC_ASSETS.has(path)) return next();
 
   // Without a configured passphrase the diary would be world-readable, so fail
   // closed rather than open: serve the login page explaining how to set one.
   if (!password) {
-    if (path.startsWith("/api/")) return c.json({ error: "This Macroflow has no passphrase configured yet." }, 503);
+    if (path.startsWith("/api/")) return c.json({ error: "This Jamtytrack has no passphrase configured yet." }, 503);
     return c.html(loginPage({ configured: false }), 503);
   }
 
@@ -366,7 +388,7 @@ app.post("/api/analyze", async (c) => {
 
   let imagePath: string | undefined;
   if (image && typeof image !== "string") {
-    if (!image.type.startsWith("image/")) return c.json({ error: "Only image uploads are supported" }, 400);
+    if (!ALLOWED_IMAGE_TYPES.has(image.type)) return c.json({ error: "Only JPEG, PNG or WebP uploads are supported" }, 400);
     if (image.size > 15 * 1024 * 1024) return c.json({ error: "That photo is larger than 15 MB" }, 400);
     const extension = image.type === "image/png" ? "png" : "jpg";
     imagePath = `/uploads/${crypto.randomUUID()}.${extension}`;
@@ -460,11 +482,62 @@ async function requireUnlock(c: { env: Env; req: { raw: Request } }) {
 
 const lockedResponse = { error: "Progress photos are locked", locked: true } as const;
 
-app.get("/api/progress/state", async (c) => c.json({
-  unlocked: await requireUnlock(c),
-  unlockMinutes,
-  separateSecret: hasSeparatePhotoSecret(c.env)
-}));
+type PhotoCryptoRow = {
+  salt: string;
+  auth_verifier: string;
+  recovery_verifier: string;
+  wrapped_passphrase: string;
+  wrapped_recovery: string;
+};
+
+const getPhotoCrypto = (env: Env) =>
+  env.DB.prepare("SELECT salt, auth_verifier, recovery_verifier, wrapped_passphrase, wrapped_recovery FROM photo_crypto WHERE id = 1")
+    .first<PhotoCryptoRow>();
+
+app.get("/api/progress/state", async (c) => {
+  const secret = photoSecret(c.env);
+  // expiresAt, not just a boolean: the client closes the gallery on that
+  // instant, so a tab opened mid-window must inherit the window it is in.
+  const expiresAt = secret ? await photoUnlockExpiry(c.req.raw, secret) : null;
+  const crypto = await getPhotoCrypto(c.env);
+  return c.json({
+    unlocked: expiresAt !== null,
+    unlockMinutes,
+    expiresAt,
+    separateSecret: hasSeparatePhotoSecret(c.env),
+    // The salt is not secret and the browser needs it to derive anything at
+    // all. The wrapped master key is withheld until an unlock succeeds, so a
+    // stolen session cannot carry it off for an offline attack.
+    encryption: crypto ? { configured: true, salt: crypto.salt } : { configured: false, salt: null }
+  });
+});
+
+/**
+ * Turns encryption on. Everything is computed in the browser; the Worker is
+ * handed only material it cannot decrypt with, and stores it verbatim.
+ *
+ * One-shot on purpose: allowing a second call would let anyone holding a
+ * session replace the verifiers and wrapped keys, which would not reveal the
+ * old photos but would orphan them permanently.
+ */
+app.post("/api/progress/setup", async (c) => {
+  if (await getPhotoCrypto(c.env)) return c.json({ error: "Photo encryption is already set up" }, 409);
+
+  const body = await c.req.json<Record<string, unknown>>().catch(() => ({} as Record<string, unknown>));
+  const fields = ["salt", "authVerifier", "recoveryVerifier", "wrappedPassphrase", "wrappedRecovery"] as const;
+  const values: Record<string, string> = {};
+  for (const field of fields) {
+    const value = typeof body[field] === "string" ? (body[field] as string) : "";
+    if (!value || value.length > 512) return c.json({ error: `Missing or invalid ${field}` }, 400);
+    values[field] = value;
+  }
+
+  await c.env.DB.prepare(
+    "INSERT INTO photo_crypto (id, version, salt, auth_verifier, recovery_verifier, wrapped_passphrase, wrapped_recovery) VALUES (1, 1, ?, ?, ?, ?, ?)"
+  ).bind(values.salt, values.authVerifier, values.recoveryVerifier, values.wrappedPassphrase, values.wrappedRecovery).run();
+
+  return c.json({ configured: true }, 201);
+});
 
 app.post("/api/progress/unlock", async (c) => {
   const secret = photoSecret(c.env);
@@ -478,8 +551,32 @@ app.post("/api/progress/unlock", async (c) => {
   if (await isLockedOut(c.env, ip)) return c.json({ error: "Too many attempts. Try again in 15 minutes." }, 429);
   if (await isGloballyLockedOut(c.env)) return c.json({ error: "Too many failed attempts across the internet. Photos are sealed for an hour." }, 429);
 
-  const body = await c.req.json<{ password?: string }>().catch(() => ({ password: "" }));
-  if (!verifyPassword(String(body.password || ""), secret)) {
+  type UnlockBody = { password?: string; proof?: string; kind?: string };
+  const body = await c.req.json<UnlockBody>().catch(() => ({} as UnlockBody));
+  const crypto = await getPhotoCrypto(c.env);
+
+  /*
+   * Two ways in, depending on whether encryption is on.
+   *
+   * With it on the browser sends a proof — SHA-256 of either the auth half of
+   * the derived key or of the recovery key — and never the passphrase itself,
+   * which is the whole point: the Worker can check it and still not decrypt
+   * anything. Without it, the legacy path compares the plaintext passphrase to
+   * the PHOTO_PASSPHRASE secret, which is what pre-encryption photos still use.
+   */
+  let ok: boolean;
+  let wrappedKey: string | null = null;
+  if (crypto) {
+    const proof = String(body.proof || "");
+    const recovery = body.kind === "recovery";
+    const expected = recovery ? crypto.recovery_verifier : crypto.auth_verifier;
+    ok = Boolean(proof) && verifyPassword(proof, expected);
+    if (ok) wrappedKey = recovery ? crypto.wrapped_recovery : crypto.wrapped_passphrase;
+  } else {
+    ok = verifyPassword(String(body.password || ""), secret);
+  }
+
+  if (!ok) {
     const { remaining } = await recordFailure(c.env, ip);
     await recordGlobalFailure(c.env);
     return c.json({
@@ -489,8 +586,9 @@ app.post("/api/progress/unlock", async (c) => {
 
   await clearFailures(c.env, ip);
   await clearGlobalFailures(c.env);
-  c.header("set-cookie", await createUnlockCookie(secret));
-  return c.json({ unlocked: true, unlockMinutes });
+  const { cookie, expiresAt } = await createUnlockCookie(secret);
+  c.header("set-cookie", cookie);
+  return c.json({ unlocked: true, unlockMinutes, expiresAt, wrappedKey });
 });
 
 app.post("/api/progress/lock", (c) => {
@@ -500,11 +598,21 @@ app.post("/api/progress/lock", (c) => {
 
 const POSES = ["front", "side", "back"] as const;
 
+/*
+ * An allowlist rather than an `image/` prefix test. The prefix admitted
+ * image/svg+xml, which the Worker would then serve back from its own origin
+ * with that content-type — and an SVG can carry script. The CSP blocks it today
+ * (script-src 'self', no unsafe-inline), but that made the defence rest on one
+ * policy line, which is too thin for something that stores arbitrary uploads.
+ */
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
 const serializeProgressPhoto = (row: Record<string, unknown>) => ({
   id: row.id,
   takenAt: row.taken_at,
   takenDate: row.taken_date,
   pose: row.pose,
+  encrypted: Number(row.encrypted) === 1,
   imagePath: row.image_path,
   weightKg: row.weight_kg,
   notes: row.notes
@@ -513,7 +621,7 @@ const serializeProgressPhoto = (row: Record<string, unknown>) => ({
 app.get("/api/progress", async (c) => {
   if (!await requireUnlock(c)) return c.json(lockedResponse, 403);
   const rows = await c.env.DB.prepare(
-    "SELECT id, taken_at, taken_date, pose, image_path, weight_kg, notes FROM progress_photos ORDER BY taken_at DESC LIMIT 500"
+    "SELECT id, taken_at, taken_date, pose, image_path, weight_kg, notes, encrypted FROM progress_photos ORDER BY taken_at DESC LIMIT 500"
   ).all<Record<string, unknown>>();
   return c.json((rows.results ?? []).map(serializeProgressPhoto));
 });
@@ -523,7 +631,14 @@ app.post("/api/progress", async (c) => {
   const form = await c.req.formData();
   const image = form.get("image");
   if (!image || typeof image === "string") return c.json({ error: "Attach a photo" }, 400);
-  if (!image.type.startsWith("image/")) return c.json({ error: "Only image uploads are supported" }, 400);
+  // An encrypted photo arrives as opaque bytes, so the image content-type check
+  // only applies to the plaintext path. Encryption is asserted by the client and
+  // recorded verbatim: the Worker cannot tell ciphertext from noise, and a wrong
+  // flag only breaks that one photo for the person who uploaded it.
+  const encrypted = String(form.get("encrypted") || "") === "1";
+  if (!encrypted && !ALLOWED_IMAGE_TYPES.has(image.type)) {
+    return c.json({ error: "Only JPEG, PNG or WebP uploads are supported" }, 400);
+  }
   if (image.size > 15 * 1024 * 1024) return c.json({ error: "That photo is larger than 15 MB" }, 400);
 
   const pose = String(form.get("pose") || "front");
@@ -544,15 +659,16 @@ app.post("/api/progress", async (c) => {
   const takenDate = dateInTimeZone(takenAt, settings.timezone);
 
   const id = crypto.randomUUID();
-  const extension = image.type === "image/png" ? "png" : "jpg";
+  const extension = encrypted ? "enc" : image.type === "image/png" ? "png" : "jpg";
   const imagePath = `/progress-photos/${id}.${extension}`;
-  await putPhoto(c.env, photoKey(imagePath), await image.arrayBuffer(), image.type);
+  const storedType = encrypted ? "application/octet-stream" : image.type;
+  await putPhoto(c.env, photoKey(imagePath), await image.arrayBuffer(), storedType);
 
   await c.env.DB.prepare(
-    "INSERT INTO progress_photos (id, taken_at, taken_date, pose, image_path, weight_kg, notes) VALUES (?, ?, ?, ?, ?, ?, ?)"
-  ).bind(id, takenAt, takenDate, pose, imagePath, weightKg, String(form.get("notes") || "").slice(0, 500)).run();
+    "INSERT INTO progress_photos (id, taken_at, taken_date, pose, image_path, weight_kg, notes, encrypted) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+  ).bind(id, takenAt, takenDate, pose, imagePath, weightKg, String(form.get("notes") || "").slice(0, 500), encrypted ? 1 : 0).run();
 
-  return c.json({ id, takenAt, takenDate, pose, imagePath, weightKg, notes: String(form.get("notes") || "") }, 201);
+  return c.json({ id, takenAt, takenDate, pose, imagePath, weightKg, encrypted, notes: String(form.get("notes") || "") }, 201);
 });
 
 app.delete("/api/progress/:id", async (c) => {
@@ -571,7 +687,12 @@ app.get("/progress-photos/:key", async (c) => {
   if (!photo) return c.notFound();
   return c.body(photo.bytes, 200, {
     "content-type": photo.contentType,
-    "cache-control": "private, max-age=31536000, immutable",
+    // no-store, unlike the year-long cache on meal photos. A short unlock window
+    // is pointless if the bytes then sit in the browser's disk cache for a year:
+    // locking would clear the screen while leaving the photos on the device,
+    // retrievable from cache or straight from history by URL. The cost is a KV
+    // read per view, which is nothing against the 100k/day allowance.
+    "cache-control": "private, no-store, max-age=0, must-revalidate",
     "vary": "Cookie"
   });
 });
@@ -635,11 +756,47 @@ app.post("/api/weight", async (c) => {
 
 app.post("/api/telegram/test", async (c) => {
   const { sendTelegramMessage } = await import("./telegram.js");
-  await sendTelegramMessage(c.env, "✅ <b>Macroflow is connected.</b> Your Cloudflare Worker reminder service is working.");
+  await sendTelegramMessage(c.env, "✅ <b>Jamtytrack is connected.</b> Your Cloudflare Worker reminder service is working.");
   return c.json({ ok: true });
 });
 
+/**
+ * Everything the UI needs to say whether Telegram actually works.
+ *
+ * A saved token and chat id are not enough — that combination reads as
+ * "connected" while every incoming update is rejected, which is exactly the
+ * state this deployment sat in unnoticed. `getWebhookInfo` is what makes the
+ * failure visible, because Telegram is the only party that sees the rejections.
+ */
+app.get("/api/telegram/status", async (c) => {
+  const settings = await getSettings(c.env);
+  const secretConfigured = Boolean(c.env.TELEGRAM_WEBHOOK_SECRET);
+  const tokenConfigured = Boolean(settings.telegram_bot_token);
+
+  let webhook: Awaited<ReturnType<typeof getWebhookInfo>> | null = null;
+  let error = "";
+  if (tokenConfigured) {
+    try { webhook = await getWebhookInfo(c.env); }
+    catch (cause) { error = cause instanceof Error ? cause.message : "Could not reach Telegram"; }
+  }
+
+  return c.json({
+    tokenConfigured,
+    chatId: settings.telegram_chat_id,
+    secretConfigured,
+    expectedUrl: `${(c.env.APP_URL || new URL(c.req.url).origin).replace(/\/+$/, "")}/api/telegram/webhook`,
+    webhook,
+    error
+  });
+});
+
 app.post("/api/telegram/webhook/register", async (c) => {
+  // Registering without the secret would point Telegram at an endpoint that
+  // answers 503 to every update — a working-looking setup that silently drops
+  // everything. Refuse, and say which secret is missing.
+  if (!c.env.TELEGRAM_WEBHOOK_SECRET) {
+    return c.json({ error: "Set the TELEGRAM_WEBHOOK_SECRET Worker secret first — without it every update is rejected." }, 400);
+  }
   const url = new URL(c.req.url);
   return c.json({ ok: true, result: await registerWebhook(c.env, c.env.APP_URL || `${url.protocol}//${url.host}`) });
 });
@@ -671,7 +828,7 @@ app.get("/api/export", async (c) => {
     weights: weights.results ?? [],
     mealMemories: memories.results ?? []
   }, 200, {
-    "content-disposition": `attachment; filename=macroflow-export-${new Date().toISOString().slice(0, 10)}.json`
+    "content-disposition": `attachment; filename=jamtytrack-export-${new Date().toISOString().slice(0, 10)}.json`
   });
 });
 

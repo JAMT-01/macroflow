@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Bell, Bot, Brain, Check, Database, Download, ExternalLink, KeyRound, LogOut, Ruler, Save, ShieldCheck, Trash2 } from "lucide-react";
 import { api } from "../api";
-import type { MealMemory, Reminder, Settings } from "../types";
+import type { MealMemory, Reminder, Settings, TelegramStatus } from "../types";
 
 export function SettingsScreen({ settings, onSettings }: { settings: Settings; onSettings: (settings: Settings) => void }) {
   const [goals, setGoals] = useState({ calorieTarget: settings.calorieTarget, proteinTarget: settings.proteinTarget, carbsTarget: settings.carbsTarget, fatTarget: settings.fatTarget, fiberTarget: settings.fiberTarget });
@@ -13,9 +13,14 @@ export function SettingsScreen({ settings, onSettings }: { settings: Settings; o
   const [timezone, setTimezone] = useState(settings.timezone);
   const [reminders, setReminders] = useState<Reminder[]>(settings.reminders);
   const [memories, setMemories] = useState<MealMemory[]>([]);
+  const [telegram, setTelegram] = useState<TelegramStatus | null>(null);
+  const [registering, setRegistering] = useState(false);
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
   useEffect(() => { api.memories().then(setMemories); }, []);
+  // Only worth asking Telegram about once a token exists; the call goes out to
+  // their API and would just error otherwise.
+  useEffect(() => { if (settings.telegramTokenConfigured) refreshTelegram(); }, [settings.telegramTokenConfigured]);
 
   async function save(data: Record<string, unknown>, message: string) {
     setSaving(true); setStatus("");
@@ -43,6 +48,37 @@ export function SettingsScreen({ settings, onSettings }: { settings: Settings; o
     catch (error) { setStatus(error instanceof Error ? error.message : "Test failed"); }
   }
 
+  const refreshTelegram = () => api.telegramStatus().then(setTelegram).catch(() => setTelegram(null));
+
+  /*
+   * "Connected" used to mean nothing more than a saved token and chat id, which
+   * is how this deployment sat with a dead webhook for weeks. Delivery is what
+   * decides it now: the secret has to exist, and Telegram has to be pointing at
+   * this app without a standing error.
+   */
+  const telegramHealthy = Boolean(
+    settings.telegramTokenConfigured && settings.telegramChatId &&
+    telegram?.secretConfigured && telegram.webhook?.url === telegram.expectedUrl && !telegram.webhook?.lastError
+  );
+  const telegramLabel = !settings.telegramTokenConfigured ? "Not configured"
+    : !settings.telegramChatId ? "Awaiting /start"
+    : !telegram ? "Checking…"
+    : !telegram.secretConfigured ? "Webhook secret missing"
+    : telegram.webhook?.url !== telegram.expectedUrl ? "Webhook not registered"
+    : telegram.webhook?.lastError ? "Delivery failing"
+    : "Connected";
+
+  async function registerWebhook() {
+    setRegistering(true);
+    try {
+      await api.registerTelegramWebhook();
+      setStatus("Webhook registered");
+      await refreshTelegram();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Could not register the webhook");
+    } finally { setRegistering(false); }
+  }
+
   async function removeMemory(id: string) {
     await api.deleteMemory(id);
     setMemories((current) => current.filter((memory) => memory.id !== id));
@@ -62,12 +98,39 @@ export function SettingsScreen({ settings, onSettings }: { settings: Settings; o
             <div className="settings-actions"><button className="primary" disabled={saving || (!settings.openrouterConfigured && !openrouterKey.trim())} onClick={saveOpenRouter}><Save size={17} /> Save OpenRouter</button></div>
           </section>
 
-          <section className="settings-card"><div className="settings-heading"><span className="settings-icon coral"><Bot /></span><div><h2>Telegram companion</h2><p>Reminders, daily totals and quick text logging.</p></div><span className={`status-badge ${settings.telegramTokenConfigured && settings.telegramChatId ? "online" : "offline"}`}><i />{settings.telegramTokenConfigured ? settings.telegramChatId ? "Connected" : "Awaiting /start" : "Not configured"}</span></div>
+          <section className="settings-card"><div className="settings-heading"><span className="settings-icon coral"><Bot /></span><div><h2>Telegram companion</h2><p>Reminders, daily totals and quick text logging.</p></div><span className={`status-badge ${telegramHealthy ? "online" : "offline"}`}><i />{telegramLabel}</span></div>
             <div className="telegram-steps"><span><b>1</b>Create a bot with @BotFather</span><span><b>2</b>Paste its token below</span><span><b>3</b>Send your bot <code>/start</code></span></div>
             <div className="form-grid two"><label className="field"><span>Bot token</span><input type="password" placeholder={settings.telegramTokenConfigured ? "Token already saved — enter to replace" : "123456:ABC…"} value={token} onChange={(e) => setToken(e.target.value)} /></label><label className="field"><span>Chat ID <em>auto-filled after /start</em></span><input placeholder="Send /start, then refresh" value={chatId} onChange={(e) => setChatId(e.target.value)} /></label></div>
             <label className="field"><span>Diary timezone</span><input value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="America/Buenos_Aires" /><small>This defines “today” for the diary, averages, Telegram, and midnight boundaries.</small></label>
             <div className="reminder-list"><div className="review-title"><h3><Bell size={17} /> Reminder schedule</h3><span>{timezone}</span></div>{reminders.map((reminder, index) => <div className="reminder-row" key={reminder.id}><label className="switch"><input type="checkbox" checked={reminder.enabled} onChange={(e) => setReminders(reminders.map((item, i) => i === index ? { ...item, enabled: e.target.checked } : item))} /><span /></label><strong>{reminder.label}</strong><input type="time" value={reminder.time} onChange={(e) => setReminders(reminders.map((item, i) => i === index ? { ...item, time: e.target.value } : item))} /></div>)}</div>
-            <div className="settings-actions"><button className="primary" disabled={saving} onClick={saveTelegram}><Save size={17} /> Save Telegram</button><button className="secondary" disabled={!settings.telegramTokenConfigured} onClick={testTelegram}>Send test</button></div>
+            {settings.telegramTokenConfigured && telegram && (
+              <div className={`telegram-health${telegram.secretConfigured && telegram.webhook?.url === telegram.expectedUrl && !telegram.webhook?.lastError ? " ok" : " warn"}`}>
+                <ul>
+                  <li>
+                    <b>Webhook secret</b>
+                    {telegram.secretConfigured
+                      ? <span>Set</span>
+                      : <span>Missing — every update Telegram sends is rejected with a 503. Set <code>TELEGRAM_WEBHOOK_SECRET</code> as a Worker secret.</span>}
+                  </li>
+                  <li>
+                    <b>Registered URL</b>
+                    {!telegram.webhook?.url
+                      ? <span>Telegram has no webhook for this bot yet.</span>
+                      : telegram.webhook.url === telegram.expectedUrl
+                        ? <span>Correct</span>
+                        : <span>Points at <code>{telegram.webhook.url}</code>, but this app is at <code>{telegram.expectedUrl}</code>. Re-register.</span>}
+                  </li>
+                  {telegram.webhook?.lastError && (
+                    <li><b>Last error</b><span>{telegram.webhook.lastError}{telegram.webhook.lastErrorAt ? ` (${new Date(telegram.webhook.lastErrorAt).toLocaleString()})` : ""}</span></li>
+                  )}
+                  {Boolean(telegram.webhook?.pendingUpdates) && (
+                    <li><b>Queued</b><span>{telegram.webhook?.pendingUpdates} update(s) waiting — Telegram is retrying because delivery is failing.</span></li>
+                  )}
+                  {telegram.error && <li><b>Telegram API</b><span>{telegram.error}</span></li>}
+                </ul>
+              </div>
+            )}
+            <div className="settings-actions"><button className="primary" disabled={saving} onClick={saveTelegram}><Save size={17} /> Save Telegram</button><button className="secondary" disabled={!settings.telegramTokenConfigured || registering} onClick={registerWebhook}>{registering ? "Registering…" : "Register webhook"}</button><button className="secondary" disabled={!settings.telegramTokenConfigured} onClick={testTelegram}>Send test</button></div>
           </section>
 
           <section className="settings-card"><div className="settings-heading"><span className="settings-icon blue"><Brain /></span><div><h2>Personal meal memory</h2><p>Facts learned from your correction chats and reused on similar meals.</p></div><span className="count-badge">{memories.length}</span></div>

@@ -170,8 +170,21 @@ export type ProgressPhoto = {
   takenDate: string;
   pose: ProgressPose;
   imagePath: string;
+  /** False for photos taken before end-to-end encryption was turned on. */
+  encrypted: boolean;
   weightKg: number | null;
   notes: string;
+};
+
+export type PhotoEncryptionState = { configured: boolean; salt: string | null };
+
+export type TelegramStatus = {
+  tokenConfigured: boolean;
+  chatId: string;
+  secretConfigured: boolean;
+  expectedUrl: string;
+  webhook: { url: string; pendingUpdates: number; lastError: string; lastErrorAt: string | null } | null;
+  error: string;
 };
 
 export type MealMemory = { id: string; subject: string; note: string; timesUsed: number; createdAt: string; updatedAt: string };

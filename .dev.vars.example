@@ -12,5 +12,6 @@ OPENROUTER_API_KEY=
 OPENROUTER_MODEL=google/gemini-3.6-flash
 
 # Shared secret Telegram sends back in x-telegram-bot-api-secret-token so the
-# webhook cannot be spoofed. Generate one with: openssl rand -hex 32
+# webhook cannot be spoofed. Generate one with:
+#   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 TELEGRAM_WEBHOOK_SECRET=

@@ -14,7 +14,7 @@ export function Layout({ tab, setTab, onScan, children }: { tab: Tab; setTab: (t
       <aside className="sidebar">
         <button className="brand" onClick={() => setTab("today")}>
           <span className="brand-mark"><Sparkles size={19} /></span>
-          <span>Macroflow</span>
+          <span>Jamtytrack</span>
         </button>
         <nav className="side-nav">
           {nav.map(({ id, label, icon: Icon }) => (

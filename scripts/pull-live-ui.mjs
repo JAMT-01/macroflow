@@ -12,7 +12,7 @@ import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
 
-const ORIGIN = process.env.MACROFLOW_ORIGIN || "https://macro.montagnertudor.org";
+const ORIGIN = process.env.JAMTYTRACK_ORIGIN || "https://jamtytrack.montagnertudor.org";
 const OUT = path.resolve("tmp/live-ui");
 
 function askHidden(question) {
@@ -41,7 +41,7 @@ const save = (name, body) => {
   return `${path.relative(process.cwd(), file)} (${(body.length / 1024).toFixed(1)} kB)`;
 };
 
-const passphrase = await askHidden("Macroflow passphrase: ");
+const passphrase = await askHidden("Jamtytrack passphrase: ");
 if (!passphrase) { console.error("No passphrase entered."); process.exit(1); }
 
 const login = await fetch(`${ORIGIN}/api/auth/login`, {

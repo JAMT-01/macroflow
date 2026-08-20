@@ -110,7 +110,7 @@ Given the structured food details and the image again:
 - Sum carbohydrate contributions, especially grains and vegetables.
 - Return one strict JSON object for the overall meal.
 
-The Macroflow benchmark implements these concepts with stricter schemas and neutral wording. It does not reveal Nutrition5k IDs, ingredient labels, or ground truth to the model.
+The Jamtytrack benchmark implements these concepts with stricter schemas and neutral wording. It does not reveal Nutrition5k IDs, ingredient labels, or ground truth to the model.
 
 ## Why contextual prompts matter
 
@@ -140,9 +140,9 @@ The benchmark's colorized Nutrition5k depth mode is therefore a go/no-go experim
 
 Primary sources: [ARKit sceneDepth](https://developer.apple.com/documentation/arkit/arconfiguration/framesemantics-swift.struct/scenedepth), [Apple point-cloud sample](https://developer.apple.com/documentation/arkit/displaying-a-point-cloud-using-scene-depth).
 
-## Macroflow pilot benchmark: 2026-08-13
+## Jamtytrack pilot benchmark: 2026-08-13
 
-Macroflow ran five current OpenRouter vision models against the same three official weighed Nutrition5k plates. Each model received one RGB image per plate using both the direct and two-step prompts. Temperature was 0.5, outputs used a strict JSON schema, and models with mandatory reasoning were set to minimum effort with additional token headroom so reasoning could not consume the 1,024-token answer budget.
+Jamtytrack ran five current OpenRouter vision models against the same three official weighed Nutrition5k plates. Each model received one RGB image per plate using both the direct and two-step prompts. Temperature was 0.5, outputs used a strict JSON schema, and models with mandatory reasoning were set to minimum effort with additional token headroom so reasoning could not consume the 1,024-token answer budget.
 
 | Model | Pipeline | Calorie MAE | Calorie PMAE | Macro MAE | Cost / valid plate | Latency / plate |
 |---|---|---:|---:|---:|---:|---:|

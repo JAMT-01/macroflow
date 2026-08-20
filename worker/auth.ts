@@ -11,7 +11,7 @@ import type { Env } from "./db.js";
 
 const COOKIE = "mf_session";
 const UNLOCK_COOKIE = "mf_photos";
-const UNLOCK_MINUTES = 15;
+const UNLOCK_MINUTES = 3;
 /*
  * A photo passphrase is often a short PIN, whose keyspace is small enough that
  * per-IP limits alone mean nothing: an attacker with a few hundred proxies gets
@@ -91,7 +91,11 @@ export function verifyPassword(candidate: string, password: string) {
  * Signed with a different context string from the session cookie, so a session
  * cookie can never be replayed as an unlock. Deliberately a *browser-session*
  * cookie with no Max-Age — closing the browser drops it — and the signed
- * payload expires 15 minutes after it was issued regardless.
+ * payload expires UNLOCK_MINUTES after it was issued regardless.
+ *
+ * The expiry is baked into the cookie at issue time, so shortening the window
+ * only affects unlocks granted after the change: there is no session store to
+ * revoke through. Rotating PHOTO_PASSPHRASE is the only way to kill live ones.
  */
 async function signUnlock(password: string, payload: string) {
   const key = await crypto.subtle.importKey(
@@ -107,23 +111,35 @@ async function signUnlock(password: string, payload: string) {
 export async function createUnlockCookie(password: string) {
   const expiresAt = Date.now() + UNLOCK_MINUTES * 60 * 1000;
   const value = `${expiresAt}.${await signUnlock(password, String(expiresAt))}`;
-  return `${UNLOCK_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax`;
+  return { cookie: `${UNLOCK_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax`, expiresAt };
 }
 
 export function clearUnlockCookie() {
   return `${UNLOCK_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 }
 
-export async function hasPhotoUnlock(request: Request, password: string) {
+/**
+ * The instant the current unlock lapses, or null when there is not a valid one.
+ *
+ * The client needs the real expiry rather than just "unlocked": a tab opened
+ * partway through a window has to close the photos when *that* window ends, not
+ * UNLOCK_MINUTES after the page happened to load.
+ */
+export async function photoUnlockExpiry(request: Request, password: string) {
   const header = request.headers.get("cookie") || "";
   const match = header.match(new RegExp(`(?:^|;\\s*)${UNLOCK_COOKIE}=([^;]+)`));
-  if (!match) return false;
+  if (!match) return null;
 
   const [expiresAt, signature] = match[1].split(".");
-  if (!expiresAt || !signature) return false;
-  if (!Number.isFinite(Number(expiresAt)) || Number(expiresAt) < Date.now()) return false;
+  if (!expiresAt || !signature) return null;
+  const expiry = Number(expiresAt);
+  if (!Number.isFinite(expiry) || expiry < Date.now()) return null;
 
-  return constantTimeEquals(signature, await signUnlock(password, expiresAt));
+  return constantTimeEquals(signature, await signUnlock(password, expiresAt)) ? expiry : null;
+}
+
+export async function hasPhotoUnlock(request: Request, password: string) {
+  return (await photoUnlockExpiry(request, password)) !== null;
 }
 
 export const unlockMinutes = UNLOCK_MINUTES;
@@ -210,7 +226,12 @@ export function loginPage(options: { error?: string; configured: boolean } = { c
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#172019" />
 <meta name="robots" content="noindex, nofollow" />
-<title>Macroflow</title>
+<link rel="icon" href="/favicon-32.png" sizes="32x32" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Jamtytrack" />
+<title>Jamtytrack</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -238,8 +259,8 @@ export function loginPage(options: { error?: string; configured: boolean } = { c
 </head>
 <body>
   <form method="POST" action="/api/auth/login">
-    <div class="mark">M</div>
-    <h1>Macroflow</h1>
+    <div class="mark">J</div>
+    <h1>Jamtytrack</h1>
     <p class="sub">Enter your passphrase to open the diary.</p>
     ${message}
     <label>Passphrase

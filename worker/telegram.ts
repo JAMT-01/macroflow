@@ -33,7 +33,7 @@ export async function sendTelegramMessage(env: Env, text: string, chatId?: strin
     chat_id: target,
     text,
     parse_mode: "HTML",
-    reply_markup: { inline_keyboard: [[{ text: "Open Macroflow", url: env.APP_URL || "https://macro.montagnertudor.org" }]] }
+    reply_markup: { inline_keyboard: [[{ text: "Open Jamtytrack", url: env.APP_URL || "https://jamtytrack.montagnertudor.org" }]] }
   });
 }
 
@@ -68,7 +68,7 @@ async function logFromTelegram(env: Env, text: string) {
   ];
   await env.DB.batch(statements);
   const calories = analysis.items.reduce((sum, item) => sum + item.calories, 0);
-  return `✅ Logged <b>${analysis.title}</b> · ${Math.round(calories)} kcal\nFiled as <b>${mealType}</b>. Review the estimate and the category in Macroflow when you can.`;
+  return `✅ Logged <b>${analysis.title}</b> · ${Math.round(calories)} kcal\nFiled as <b>${mealType}</b>. Review the estimate and the category in Jamtytrack when you can.`;
 }
 
 export async function handleTelegramUpdate(env: Env, update: TelegramUpdate) {
@@ -82,7 +82,7 @@ export async function handleTelegramUpdate(env: Env, update: TelegramUpdate) {
 
   const text = message.text.trim();
   if (/^\/start/i.test(text)) {
-    await sendTelegramMessage(env, "👋 <b>Macroflow is connected.</b>\n\nUse /today for your totals or /log followed by a meal description.", chatId);
+    await sendTelegramMessage(env, "👋 <b>Jamtytrack is connected.</b>\n\nUse /today for your totals or /log followed by a meal description.", chatId);
   } else if (/^\/(today|remaining)/i.test(text)) {
     await sendTelegramMessage(env, await todaySummary(env), chatId);
   } else if (/^\/log\b/i.test(text)) {
@@ -116,6 +116,28 @@ export async function checkReminders(env: Env) {
     if (!claimed.meta.changes) continue;
     await sendTelegramMessage(env, `⏰ <b>${reminder.label} check-in</b>\nTake ten seconds to log what you ate. Consistency beats precision.`);
   }
+}
+
+/**
+ * What Telegram believes about our webhook.
+ *
+ * Worth surfacing because every failure mode here is silent from our side:
+ * Telegram retries against a URL we never see, and `last_error_message` is the
+ * only place a 403 (wrong secret) or 503 (no secret configured) shows up.
+ */
+export async function getWebhookInfo(env: Env) {
+  const info = await telegramRequest(env, "getWebhookInfo", {}) as {
+    url?: string;
+    pending_update_count?: number;
+    last_error_message?: string;
+    last_error_date?: number;
+  };
+  return {
+    url: info.url || "",
+    pendingUpdates: info.pending_update_count ?? 0,
+    lastError: info.last_error_message || "",
+    lastErrorAt: info.last_error_date ? new Date(info.last_error_date * 1000).toISOString() : null
+  };
 }
 
 /** Points Telegram at this Worker. Called once from POST /api/telegram/webhook/register. */

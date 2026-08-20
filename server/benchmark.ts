@@ -98,7 +98,7 @@ async function structuredOpenRouter(model: string, prompt: string, images: strin
       "content-type": "application/json",
       "authorization": `Bearer ${apiKey}`,
       "HTTP-Referer": process.env.APP_URL || "http://localhost:8787",
-      "X-OpenRouter-Title": "Macroflow Nutrition Benchmark"
+      "X-OpenRouter-Title": "Jamtytrack Nutrition Benchmark"
     },
     body: JSON.stringify({
       model,

@@ -1,4 +1,4 @@
-# Macroflow — engineering guide
+# Jamtytrack — engineering guide
 
 Everything an engineer needs to take this over with no prior context. The [README](README.md) is the product and setup document; this one explains how the system is built, why it is built that way, and which things will bite you.
 
@@ -6,9 +6,10 @@ Everything an engineer needs to take this over with no prior context. The [READM
 
 ## 1. Orientation
 
-Macroflow is a single-user macro tracker for one person in Argentina. Photograph a meal (or describe it in words), a vision model estimates the macros, you edit and save. It also tracks weight, body progress photos, and 30-day trends.
+Jamtytrack is a single-user macro tracker for one person in Argentina. Photograph a meal (or describe it in words), a vision model estimates the macros, you edit and save. It also tracks weight, body progress photos, and 30-day trends.
 
-- **Live:** `https://macro.montagnertudor.org`
+- **Live:** `https://jamtytrack.montagnertudor.org`
+- **The Cloudflare resources are still named `macroflow`.** The product was renamed; the Worker and the D1 database were not, and that is deliberate. Cloudflare cannot rename either in place: renaming a Worker creates a *new* one that starts with no secrets, and D1 has no rename command at all, so it would mean copying a live database that holds the photo encryption keys. Neither risk buys anything, because the names appear only in the dashboard and in `wrangler` commands. **Every `wrangler` command below says `macroflow` on purpose.**
 - **Runs entirely on Cloudflare's free tier**: Worker + D1 + KV, no origin server
 - **Single user.** There is no user table, no tenancy, no sharing. One passphrase gates the app; a second one gates the body photos.
 - **Not a medical device.** Every number is an estimate and the UI says so.
@@ -48,7 +49,7 @@ pnpm dev
 | `APP_PASSWORD` | signing in | Worker secret | ask the owner, or set your own on your own deployment |
 | `PHOTO_PASSPHRASE` | body photos | Worker secret | as above; falls back to `APP_PASSWORD` when unset |
 | `OPENROUTER_API_KEY` | AI estimates | Worker secret, or D1 `app_secrets` via Settings | create your own at <https://openrouter.ai/settings/keys> — do not reuse production's |
-| `TELEGRAM_WEBHOOK_SECRET` | Telegram | Worker secret | generate one: `openssl rand -hex 32` |
+| `TELEGRAM_WEBHOOK_SECRET` | Telegram | Worker secret | generate one: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 
 To read which secrets a deployment *has* (names only, never values):
 
@@ -77,7 +78,7 @@ One Worker serves everything. There is no separate API host and no origin.
 ```
   Browser (React SPA, built by Vite into dist/)
       |
-      | https://macro.montagnertudor.org
+      | https://jamtytrack.montagnertudor.org
       v
   Cloudflare Worker  (worker/index.ts, Hono router)
       |
@@ -115,7 +116,8 @@ src/          React app (Vite). The whole UI.
   mealTypes.ts      the five Argentine categories + offline time-band guess
   imageCapture.ts   client-side downscale, quality scoring, EXIF stripping
   lockZoom.ts       cancels iOS pinch gestures; the viewport meta is not enough
-  components/       LogModal (the big one), ProgressPhotos, PhotoLock, Layout, MacroRing
+  components/       LogModal (the big one), ProgressPhotos, PhotoLock, PhotoViewer, Layout, MacroRing
+  photoSession.ts   browser half of the photo encryption; holds the master key in memory only
   screens/          Today, Progress, Photos, SettingsScreen, Onboarding, BenchmarkLab*
 
 worker/       The deployed backend.
@@ -127,11 +129,13 @@ worker/       The deployed backend.
 
 shared/       Imported by BOTH worker/ and server/. No runtime dependencies.
   analysis-core.ts  prompts, JSON schemas, macro maths, meal-type rules
+  photo-crypto.ts   key derivation, wrapping and AES-GCM for the body photos
   seed.ts           the 41 seed foods
   time.ts           timezone-correct "today", date ranges, diary timestamps
 
 migrations/   D1 schema, applied in order
-scripts/      One-off tooling (seed generation, local export, UI download)
+public/       Static files Vite copies into dist/ verbatim — PWA icons, manifest
+scripts/      One-off tooling (seed generation, local export, UI download, icons)
 server/       Local-only research tooling. NOT deployed. See §11.
 ```
 
@@ -158,7 +162,8 @@ D1 database `macroflow` (SQLite). Every date-like decision is timezone-aware —
 | `meal_memories` | learned prep facts | injected into later analyses |
 | `sent_reminders` | reminder dedupe | unique on `reminder_key` |
 | `login_attempts` | rate limiting | keyed by IP *and* by synthetic keys, §6 |
-| `progress_photos` | body photos | `pose` CHECK-constrained to front/side/back |
+| `progress_photos` | body photos | `pose` CHECK-constrained to front/side/back; `encrypted` marks post-encryption rows |
+| `photo_crypto` | photo encryption keys | single row; salt, two verifiers, two wrapped copies of the master key |
 | `push_subscriptions` | **unused** | §11 |
 | `reports` | **unused** | §11 |
 
@@ -224,10 +229,27 @@ Two independent gates. Both are HMAC-signed cookies with no server-side session 
 | cookie | `mf_session` | `mf_photos` |
 | secret | `APP_PASSWORD` | `PHOTO_PASSPHRASE` (falls back to `APP_PASSWORD`) |
 | HMAC context | `::macroflow-session-v1` | `::macroflow-photos-v1` |
-| lifetime | 30 days | 15 minutes, and dropped when the browser closes |
+| lifetime | 30 days | 3 minutes, and dropped when the browser closes |
 | gates | everything | `/api/progress*`, `/progress-photos/*` |
 
 The different HMAC context strings are what stop a session cookie being replayed as a photo unlock. There is a test for exactly that.
+
+### The PWA icons are public
+
+`PUBLIC_ASSETS` in `worker/index.ts` lets the manifest and the generated icons
+through the auth gate. This narrows invariant 1 on purpose: the OS fetches a
+home screen icon while signed out — often before the first login ever happens —
+so behind the gate it 401s and the installed app has no icon at all. The list is
+explicit rather than a prefix or an extension test, and holds nothing but
+branding.
+
+Regenerate them with `python scripts/generate-icons.py`, optionally passing your
+own square image. Pillow is used because there is no `sharp` or `canvas` in
+`node_modules`; the script is run by hand and never ships.
+
+The login page in `worker/auth.ts` carries the same icon `<link>` tags as
+`index.html`, because it is a separate document and it is what iOS renders — and
+would otherwise screenshot for the icon — when you are signed out.
 
 ### Public paths — the complete list
 
@@ -254,6 +276,48 @@ All in `login_attempts`, keyed to keep the three budgets independent:
 | `\|photos-global` | 20 per hour | photo unlock, **all addresses combined** |
 
 The global cap exists because the photo passphrase may be a short PIN, and per-IP limits are worthless against someone spreading guesses across many addresses. The trade-off is deliberate: anyone reaching the endpoint can exhaust the global budget and seal the photos for an hour.
+
+### The body photos are end-to-end encrypted
+
+Photos are encrypted in the browser before upload and decrypted in the browser
+after download. KV holds ciphertext, and **no key that can decrypt them ever
+reaches the Worker** — the point being that Cloudflare cannot read them either.
+
+One passphrase does both jobs. PBKDF2 stretches it to 512 bits and splits them:
+the first 256 become an *auth key*, hashed and sent to prove knowledge; the
+second 256 stay in the browser and unwrap the master key that photos are
+actually encrypted with. The Worker seeing the auth half learns nothing about
+the encryption half — they are independent outputs of the same KDF.
+
+Photos are encrypted with a random master key rather than with the derived key
+directly, and that master key is stored twice: wrapped by the passphrase half,
+and wrapped by a recovery key shown once at setup. So the recovery key opens the
+photos without the passphrase, and changing the passphrase re-wraps the master
+key instead of re-encrypting every photo.
+
+`shared/photo-crypto.ts` holds the whole scheme and is covered by 16 tests,
+including that the verifier the Worker stores cannot unwrap the master key.
+
+**What it does not defend.** The passphrase is still the root: anyone who
+captures the auth key and the salt can guess-and-derive offline, so a weak
+passphrase is weak here too — the iteration count only prices each guess. Nor
+does it help on a device already unlocked and open, which is what the 3-minute
+window is for.
+
+**Photos taken before this was switched on stay plaintext.** The `encrypted`
+column marks which is which so both kinds coexist; migrating the old ones would
+need the passphrase and so cannot happen server-side.
+
+### Uploads are allowlisted, not prefix-matched
+
+Both upload paths accept only `image/jpeg`, `image/png` and `image/webp`. The
+earlier `image/` prefix test admitted `image/svg+xml`, which the Worker would
+then serve back from its own origin under that content-type — and an SVG can
+carry script. The CSP blocks it (`script-src 'self'`, no `unsafe-inline`), but
+that left the defence resting on a single policy line.
+
+Encrypted progress photos skip the check, because ciphertext has no meaningful
+content-type; they are stored as `application/octet-stream` under an `.enc` key.
 
 ### Security headers
 
@@ -389,11 +453,15 @@ Be honest about these rather than rediscovering them.
 
 ## 12. Invariants — do not break these
 
-1. **`run_worker_first: true`.** Assets must never be served ahead of auth.
+1. **`run_worker_first: true`.** Assets must never be served ahead of auth, with
+   the single exception of `PUBLIC_ASSETS` — the manifest and PWA icons, which
+   the OS must fetch signed out. Nothing that reads the diary goes in that list.
 2. **`workers_dev: false`.** A `*.workers.dev` route would bypass any hostname-level protection such as Cloudflare Access.
 3. **Fibre ≤ carbs**, always, whatever the model says.
 4. **The plate number is a diameter.** Not a square, radius, or area.
-5. **Photo routes return 403 when locked**, never 401.
+5. **Photo routes return 403 when locked**, never 401. **No photo key material
+   reaches the Worker** — only hashes and wrapped blobs. If a change makes the
+   server able to decrypt a photo, the feature is broken.
 6. **Fail closed.** No `APP_PASSWORD` → the app is unusable, not open. No `TELEGRAM_WEBHOOK_SECRET` → the webhook is 503, not unauthenticated.
 7. **Diary dates come from `settings.timezone`**, never the client clock.
 8. **Never commit secrets.** `.dev.vars` is gitignored; `.dev.vars.example` documents the names only.
@@ -410,7 +478,26 @@ Things that have actually cost hours on this project.
 - **A stale `wrangler dev` on :8787 serves old code.** Vite proxies `/api` there, so backend edits appear to do nothing. Check what owns the port and when it started.
 - **`wrangler versions secret put` does not deploy.** See §9.
 - **`pnpm deploy` does not run the deploy script.** pnpm has its own `deploy` built-in and it shadows the script; you need `pnpm run deploy`. Every other script name in `package.json` is free of collisions.
-- **PowerShell reserves `<`.** Copying a command containing a `<placeholder>` fails before wrangler ever runs.
+- **PowerShell is not bash, and this project is developed on Windows.** Three
+  shapes of copied command have failed here:
+  - `<` is reserved, so any `<placeholder>` fails before wrangler runs.
+  - `&&` is not a valid separator in Windows PowerShell 5.1. Use `;`, or
+    `A; if ($?) { B }` when the second command depends on the first.
+  - `curl` is an **alias for `Invoke-WebRequest`**, which has no `-X` parameter,
+    so `curl -X POST …` dies with *"no parameter matches -X"*. Use
+    `Invoke-RestMethod -Method Post -Uri …`, or call `curl.exe` explicitly.
+  - `openssl` is not installed. Node is, so use it for random secrets:
+    `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Do not reach for `Get-Random`, which is not a CSPRNG.
+  - Snippets starting `await fetch(...)` are **browser** JavaScript for the
+    devtools console, not shell commands. They need the session cookie, which
+    only the browser has.
+- **A saved Telegram token and chat id do not mean Telegram works.** Without
+  `TELEGRAM_WEBHOOK_SECRET` the webhook answers 503 to every update, and nothing
+  outside Telegram's own `getWebhookInfo` reports it — this deployment sat that
+  way unnoticed. Settings → Telegram now shows the real delivery state and has a
+  **Register webhook** button, so neither the shell nor the devtools console is
+  needed. Registering without the secret is refused rather than silently
+  creating a dead webhook.
 - **Do not reuse the photo prompt for text-only meals**, or the reverse.
 - **`capture="environment"` means camera-only on iOS.** Offering the gallery needs a second `<input>` without the attribute. That is why there are two.
 - **A control under 16px makes iOS zoom the page in when you focus it.** Safari ignores `maximum-scale`, so the viewport meta does not stop it, and because pinch is locked (`src/lockZoom.ts`) there is no way back out — the app stays magnified until a reload. Any new `<input>`, `<select>` or `<textarea>` needs 16px on touch; the guard is the `@media (pointer: coarse)` block at the end of `src/styles.css`, and the login page in `worker/auth.ts` carries its own copy.
@@ -429,6 +516,9 @@ Why things are the way they are, so they do not get undone by accident.
 | AI meal type overrides the tapped slot | the model sees the food; the tap is a guess |
 | Fibre clamped to carbs | prevents inflated carb totals on high-fibre meals |
 | Photo unlock separate from login | body photos are more sensitive than macros |
+| Body photos encrypted in the browser | a passphrase gate is access control, not secrecy; the storage layer could still read them |
+| Master key wrapped twice, not derived per photo | lets the recovery key work without the passphrase, and makes a passphrase change a re-wrap rather than a re-encrypt |
+| Progress photos served `no-store` | a year-long immutable cache left the bytes on the device long after the unlock lapsed |
 | Global rate limit on photo unlock | a short PIN makes per-IP limits meaningless |
 | Progress photos as their own nav item | superseded the original call to keep them in the Progress tab: a passphrase-gated section reads as a destination, not a card halfway down a scroll. The bottom nav is five equal cells with Scan in the middle, which is what keeps it centred — a sixth item breaks that |
 | Progress photos rebuilt in React | the vanilla version guessed the theme by scanning the DOM and fought React over the nav |

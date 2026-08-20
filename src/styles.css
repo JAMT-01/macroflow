@@ -266,6 +266,63 @@ code { font-size: .88em; background: #edf0e9; padding: 2px 5px; border-radius: 5
 .photo-lock-typed .primary { justify-content:center; }
 .photo-lock-swap { border:0; background:transparent; color:#5f7355; font-size:12px; font-weight:700; cursor:pointer; padding:4px; }
 
+/* Telegram health panel. Deliberately plain rows rather than a banner: several
+   things can be wrong at once, and each needs its own line to be actionable. */
+.telegram-health { margin-top:13px; border:1px solid var(--line); border-radius:12px; padding:11px 13px; background:#f7f9f5; }
+.telegram-health.warn { border-color:#e6d3a8; background:#fdf9ec; }
+.telegram-health.ok { border-color:#cfe0b7; background:#f6fbef; }
+.telegram-health ul { margin:0; padding:0; list-style:none; display:grid; gap:8px; }
+.telegram-health li { display:grid; grid-template-columns:112px minmax(0,1fr); gap:10px; align-items:baseline; }
+.telegram-health b { font-size:11px; font-weight:700; color:#5b655c; }
+.telegram-health span { font-size:11px; line-height:1.5; color:#41503f; word-break:break-word; }
+.telegram-health code { font-size:10px; }
+@media (max-width: 760px) { .telegram-health li { grid-template-columns:1fr; gap:2px; } }
+
+/* --- Full-size photo viewer ---------------------------------------------
+   Dark ground regardless of the app's light theme: a body photo is the whole
+   point of the screen, and a pale surround washes it out. */
+.photo-open { display:block; width:100%; padding:0; border:0; background:none; cursor:zoom-in; border-radius:12px; overflow:hidden; }
+.photo-open img { display:block; width:100%; }
+.photo-open:focus-visible { outline:3px solid rgba(92,141,246,.5); outline-offset:2px; }
+
+.photo-viewer { position:fixed; inset:0; z-index:80; display:grid; grid-template-rows:auto 1fr;
+  background:rgba(14,20,15,.94); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  padding-bottom:env(safe-area-inset-bottom); animation:viewerIn .16s ease-out; }
+@keyframes viewerIn { from { opacity:0; } }
+.photo-viewer header { display:flex; align-items:center; justify-content:space-between; gap:14px;
+  padding:calc(13px + env(safe-area-inset-top)) 16px 13px; color:#f3f5ef; }
+.photo-viewer header > div:first-child { display:grid; gap:3px; min-width:0; }
+.photo-viewer header strong { font:700 15px "Manrope",sans-serif; }
+.photo-viewer header span { color:#a9b3a8; font-size:11px; }
+.photo-viewer-actions { display:flex; gap:7px; flex:0 0 auto; }
+.photo-viewer-actions button { width:38px; height:38px; display:grid; place-items:center; border:0; border-radius:11px;
+  background:rgba(255,255,255,.1); color:#f3f5ef; cursor:pointer; }
+.photo-viewer-actions button:hover { background:rgba(255,255,255,.18); }
+
+.photo-viewer figure { margin:0; min-height:0; display:grid; place-items:center; padding:0 12px 16px; }
+/* Fits the frame in both directions, so a portrait phone photo is never cropped
+   and a landscape one never overflows. */
+.photo-viewer img { max-width:100%; max-height:100%; object-fit:contain; border-radius:14px; }
+.photo-viewer-pending { color:#9aa39a; font-size:13px; }
+
+.photo-viewer-step { position:absolute; top:50%; transform:translateY(-50%); width:42px; height:42px;
+  display:grid; place-items:center; border:0; border-radius:50%; background:rgba(255,255,255,.12);
+  color:#f3f5ef; cursor:pointer; }
+.photo-viewer-step:hover { background:rgba(255,255,255,.2); }
+.photo-viewer-step.prev { left:10px; }
+.photo-viewer-step.next { right:10px; }
+
+/* Recovery key, shown exactly once. Monospaced and generously spaced because a
+   mistranscribed character is unrecoverable, and selectable so it can be copied
+   by hand when the clipboard API is unavailable. */
+.recovery-key { display:block; margin:2px 0 12px; padding:14px 12px; border:1px dashed #b9c9a6; border-radius:13px;
+  background:#f7faf1; color:#33452c; font:600 14px/1.85 ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  letter-spacing:.06em; word-break:break-all; user-select:all; text-align:center; }
+.recovery-confirm { display:flex; align-items:center; gap:9px; margin:14px 2px 2px; text-align:left;
+  color:#4d574f; font-size:12px; line-height:1.45; cursor:pointer; }
+.recovery-confirm input { width:17px; height:17px; flex:0 0 auto; accent-color:#5f7355; }
+.photo-lock-swap { display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+
 /* iOS Safari zooms the whole page in whenever you focus a control whose font-size
    is under 16px, and it ignores `maximum-scale`/`user-scalable=no` — so the
    viewport meta cannot prevent it. With pinch disabled (src/lockZoom.ts) there is

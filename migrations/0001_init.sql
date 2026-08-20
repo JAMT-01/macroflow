@@ -1,4 +1,4 @@
--- Macroflow schema for Cloudflare D1.
+-- Jamtytrack schema for Cloudflare D1.
 -- Mirrors the local SQLite schema minus the benchmark tables, which stay local
 -- to the research tooling and are never deployed.
 

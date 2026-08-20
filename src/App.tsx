@@ -23,7 +23,7 @@ export default function App() {
   }, []);
 
   if (loadingError) return (
-    <div className="fatal-state"><div className="brand-mark">!</div><h1>Macroflow server is offline</h1><p>{loadingError}</p><button className="primary" onClick={() => location.reload()}><RefreshCw size={17} /> Try again</button></div>
+    <div className="fatal-state"><div className="brand-mark">!</div><h1>Jamtytrack server is offline</h1><p>{loadingError}</p><button className="primary" onClick={() => location.reload()}><RefreshCw size={17} /> Try again</button></div>
   );
   if (!settings) return <div className="loading-screen"><LoaderCircle className="spin" /><span>Opening your diary…</span></div>;
   if (!settings.onboardingComplete) return <Onboarding initial={settings} onComplete={setSettings} />;

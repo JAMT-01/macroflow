@@ -101,7 +101,7 @@ export async function analyzeWithConfiguredProvider(description: string, relativ
         "content-type": "application/json",
         "authorization": `Bearer ${apiKey}`,
         "HTTP-Referer": process.env.APP_URL || "http://localhost:8787",
-        "X-OpenRouter-Title": "Macroflow Local"
+        "X-OpenRouter-Title": "Jamtytrack Local"
       },
       body: JSON.stringify({
         model,
@@ -243,7 +243,7 @@ EXISTING PERSONAL MEMORIES: ${JSON.stringify(existingMemories)}`
         "content-type": "application/json",
         "authorization": `Bearer ${apiKey}`,
         "HTTP-Referer": process.env.APP_URL || "http://localhost:5173",
-        "X-OpenRouter-Title": "Macroflow Local"
+        "X-OpenRouter-Title": "Jamtytrack Local"
       },
       body: JSON.stringify({
         model: process.env.OPENROUTER_MODEL || settings.openrouter_model,

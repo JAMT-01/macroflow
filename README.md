@@ -1,6 +1,6 @@
-# Macroflow
+# Jamtytrack
 
-Macroflow is a personal macro tracker built for an iPhone camera, running entirely on Cloudflare's free tier at [macro.montagnertudor.org](https://macro.montagnertudor.org). It combines an editable food diary, OpenRouter vision analysis, correction chat, reusable meal memories, progress tracking, and Telegram reminders in one web app.
+Jamtytrack is a personal macro tracker built for an iPhone camera, running entirely on Cloudflare's free tier at [jamtytrack.montagnertudor.org](https://jamtytrack.montagnertudor.org). It combines an editable food diary, OpenRouter vision analysis, correction chat, reusable meal memories, progress tracking, and Telegram reminders in one web app.
 
 ## What it does
 
@@ -24,7 +24,7 @@ This is not a medical device. Food-photo macros are estimates; review the portio
 
 ## Where your data lives
 
-Macroflow used to be local-first, with SQLite and photos on a home server. It now runs on Cloudflare, so **your diary, your meal photos, and your OpenRouter key live in your Cloudflare account**, not on your machine:
+Jamtytrack used to be local-first, with SQLite and photos on a home server. It now runs on Cloudflare, so **your diary, your meal photos, and your OpenRouter key live in your Cloudflare account**, not on your machine:
 
 | Piece | Service | Free-tier allowance |
 | --- | --- | --- |
@@ -106,7 +106,7 @@ The dashboard is a fine alternative: **Workers & Pages → macroflow → Setting
 pnpm deploy
 ```
 
-**5. Point the domain at the Worker.** `wrangler.jsonc` already declares `macro.montagnertudor.org` as a custom domain, so the deploy creates the DNS record and certificate. Verify:
+**5. Point the domain at the Worker.** `wrangler.jsonc` already declares `jamtytrack.montagnertudor.org` as a custom domain, so the deploy creates the DNS record and certificate. Verify:
 
 ```bash
 npx wrangler deployments list
@@ -126,11 +126,20 @@ Then run the commands in `tmp/kv-photos/upload.sh` to push the photos into KV.
 
 **7. Set the login passphrase** (step 3 above, if you skipped it). Until it exists the Worker fails closed: every page returns the login screen and every API call returns 503, so the diary is never public while unconfigured.
 
-**8. Connect Telegram** (optional). After saving the bot token in Settings, register the webhook — Workers cannot long-poll, so Telegram pushes updates instead:
+**8. Connect Telegram** (optional). Workers cannot long-poll, so Telegram pushes updates to a webhook — and that webhook is only accepted when a shared secret is configured, because otherwise anyone who guessed the path could inject meals. Three steps, in order:
+
+First, generate a secret and set it as the `TELEGRAM_WEBHOOK_SECRET` Worker secret (the dashboard saves and deploys in one step, avoiding the versions trap):
 
 ```bash
-curl -X POST https://macro.montagnertudor.org/api/telegram/webhook/register
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
+
+Then, in **Settings → Telegram companion**, paste the bot token, save, and press **Register webhook**. The panel there reports the live state — whether the secret exists, whether Telegram is pointing at this deployment, and any delivery error Telegram last saw.
+
+Finally, send your bot `/start` so it can store your private chat ID.
+
+Without the secret the webhook answers 503 to every update and the badge reads **Webhook secret missing** rather than Connected — registering is refused instead of creating a webhook that silently drops everything.
+
 
 ## Develop locally
 
@@ -168,11 +177,11 @@ One passphrase, stored only as the `APP_PASSWORD` Worker secret. Signing in sets
 
 To change the passphrase, run `npx wrangler versions secret put APP_PASSWORD` and deploy the version it prints. Every signed-in device is signed out, because the session signing key is derived from the passphrase.
 
-If you would rather use a real identity provider with MFA, Cloudflare Access (free up to 50 users) can sit in front of the same Worker: **Zero Trust → Access → Applications → Add a self-hosted app** for `macro.montagnertudor.org`. The passphrase gate keeps working underneath it.
+If you would rather use a real identity provider with MFA, Cloudflare Access (free up to 50 users) can sit in front of the same Worker: **Zero Trust → Access → Applications → Add a self-hosted app** for `jamtytrack.montagnertudor.org`. The passphrase gate keeps working underneath it.
 
 ## Open it on your iPhone
 
-Visit [macro.montagnertudor.org](https://macro.montagnertudor.org) in Safari, sign in, then use the Share button → **Add to Home Screen** for an app-like launcher.
+Visit [jamtytrack.montagnertudor.org](https://jamtytrack.montagnertudor.org) in Safari, sign in, then use the Share button → **Add to Home Screen** for an app-like launcher.
 
 Mobile Safari will offer the rear camera when you tap **Take photo**, or the photo library via **Choose from gallery** — iOS treats the `capture` attribute as camera-only, so each route needs its own control. Use the `1×` camera, photograph the plate from about 45 degrees, and keep the full outer rim visible. The product intentionally uses one ordinary RGB photo, your saved plate size, editable portions, and learned preparation memories.
 
@@ -230,8 +239,8 @@ The category is chosen automatically. Food composition and your note count for m
 ## Connect Telegram
 
 1. Message [@BotFather](https://t.me/BotFather), run `/newbot`, and copy the token.
-2. In Macroflow → **Settings**, paste the bot token and save.
-3. Register the webhook (see deploy step 8), then message your bot `/start`; Macroflow stores that private chat ID.
+2. In Jamtytrack → **Settings**, paste the bot token and save.
+3. Register the webhook (see deploy step 8), then message your bot `/start`; Jamtytrack stores that private chat ID.
 4. Refresh Settings, enable the reminder times you want, and press **Send test**.
 
 Supported commands:
@@ -244,7 +253,7 @@ Reminders fire from a cron trigger that runs every minute and compares your remi
 
 ## How meal memory works
 
-Macroflow does not retrain the OpenRouter model. It stores concise facts in the `meal_memories` table—for example, `Chicken milanesa: usually baked with 10 g sunflower oil`. On a later scan, relevant memories are included as private context and the model must report which ones it applied. You can inspect or delete every memory in Settings.
+Jamtytrack does not retrain the OpenRouter model. It stores concise facts in the `meal_memories` table—for example, `Chicken milanesa: usually baked with 10 g sunflower oil`. On a later scan, relevant memories are included as private context and the model must report which ones it applied. You can inspect or delete every memory in Settings.
 
 If OpenRouter is unavailable, a small correction parser can still remember common preparation notes involving oils, oven cooking, frying, homemade food, and “always/usually” phrasing.
 
@@ -268,7 +277,7 @@ The production app uses one RGB photo, a known 25 cm plate diameter when its com
 
 ## Data and backup
 
-- Diary: D1 database `macroflow`
+- Diary: D1 database `macroflow` (the Cloudflare resources kept their original name when the app was renamed — see ENGINEERING.md §1)
 - Meal photos: KV namespace `PHOTOS`, keyed `uploads/<uuid>.jpg`
 - Downloadable backup: Settings → **Export all data**
 

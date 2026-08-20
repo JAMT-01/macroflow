@@ -1,4 +1,4 @@
-import type { Analysis, BenchmarkCase, BenchmarkResearch, BenchmarkRun, CaptureMetadata, Dashboard, Food, History, MealItem, LoggedFood, MealMemory, MealType, ProgressPhoto, ProgressPose, QuickAdd, ScaleReference, Settings, VisionModel } from "./types";
+import type { Analysis, BenchmarkCase, BenchmarkResearch, BenchmarkRun, CaptureMetadata, Dashboard, Food, History, MealItem, LoggedFood, MealMemory, MealType, PhotoEncryptionState, ProgressPhoto, TelegramStatus, ProgressPose, QuickAdd, ScaleReference, Settings, VisionModel } from "./types";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
@@ -36,16 +36,31 @@ export const api = {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ analysis, message })
   }),
   memories: () => request<MealMemory[]>("/api/memories"),
-  progressState: () => request<{ unlocked: boolean; unlockMinutes: number; separateSecret: boolean }>("/api/progress/state"),
-  unlockPhotos: (password: string) => request<{ unlocked: boolean; unlockMinutes: number }>("/api/progress/unlock", {
+  progressState: () => request<{ unlocked: boolean; unlockMinutes: number; expiresAt: number | null; separateSecret: boolean; encryption: PhotoEncryptionState }>("/api/progress/state"),
+  /** Legacy path, for installs from before encryption was turned on. */
+  unlockPhotos: (password: string) => request<{ unlocked: boolean; unlockMinutes: number; expiresAt: number; wrappedKey: string | null }>("/api/progress/unlock", {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ password })
   }),
+  /**
+   * The encrypted path. `proof` is a SHA-256 hash, never the passphrase or the
+   * recovery key themselves, so the server can check it without being able to
+   * decrypt anything. It answers with the master key still wrapped.
+   */
+  unlockPhotosWithProof: (proof: string, kind: "passphrase" | "recovery") =>
+    request<{ unlocked: boolean; unlockMinutes: number; expiresAt: number; wrappedKey: string }>("/api/progress/unlock", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ proof, kind })
+    }),
+  setupPhotoEncryption: (payload: { salt: string; authVerifier: string; recoveryVerifier: string; wrappedPassphrase: string; wrappedRecovery: string }) =>
+    request<{ configured: boolean }>("/api/progress/setup", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload)
+    }),
   lockPhotos: () => request<{ unlocked: boolean }>("/api/progress/lock", { method: "POST" }),
   progressPhotos: () => request<ProgressPhoto[]>("/api/progress"),
-  addProgressPhoto: (image: File, pose: ProgressPose, weightKg?: number, notes?: string) => {
+  addProgressPhoto: (image: File, pose: ProgressPose, weightKg?: number, notes?: string, encrypted = false) => {
     const form = new FormData();
     form.append("image", image);
     form.append("pose", pose);
+    if (encrypted) form.append("encrypted", "1");
     form.append("takenAt", new Date().toISOString());
     if (weightKg) form.append("weightKg", String(weightKg));
     if (notes?.trim()) form.append("notes", notes.trim());
@@ -65,6 +80,8 @@ export const api = {
   }),
   aiStatus: () => request<{ provider: string; available: boolean; model: string }>("/api/ai/status"),
   testTelegram: () => request<{ ok: boolean }>("/api/telegram/test", { method: "POST" }),
+  telegramStatus: () => request<TelegramStatus>("/api/telegram/status"),
+  registerTelegramWebhook: () => request<{ ok: boolean }>("/api/telegram/webhook/register", { method: "POST" }),
   logout: () => request<{ ok: boolean }>("/api/auth/logout", { method: "POST" })
   , benchmarkCases: () => request<BenchmarkCase[]>("/api/benchmark/cases")
   , benchmarkModels: () => request<VisionModel[]>("/api/benchmark/models")
