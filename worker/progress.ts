@@ -31,8 +31,21 @@ interface Env {
 export const POSES = ['front', 'side', 'back'] as const;
 export type Pose = (typeof POSES)[number];
 
-/** KV prefix. The trailing slash is load-bearing — see isProgressPath. */
-const KV_PREFIX = 'progress/';
+/**
+ * KV prefix. The trailing slash is load-bearing — see isProgressPath.
+ *
+ * CORRECTED 2026-08-28: this was `progress/`, which matched nothing. The photos
+ * in production were written by the OTHER fork's Worker, which stores under
+ * `progress-photos/` — the same string as the URL prefix. Listing KV confirms
+ * it: all three objects are `progress-photos/<uuid>.jpg`, and there is nothing
+ * under `progress/` at all. So master's gallery listed three rows from the
+ * shared `progress_photos` table and then 404ed every thumbnail.
+ *
+ * Both forks share this D1 table and this KV namespace, so the prefix has to be
+ * whichever one the bytes are actually under. Changing it here loses nothing:
+ * `progress/` is empty.
+ */
+const KV_PREFIX = 'progress-photos/';
 
 /** Public URL prefix. Deliberately not `/uploads/`, which serves meal photos. */
 const URL_PREFIX = '/progress-photos/';

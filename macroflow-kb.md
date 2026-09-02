@@ -43,12 +43,13 @@ R2 is **not enabled** on this account (API error 10042).
 | `env.DB` | D1 → `macroflow` |
 | `env.PHOTOS` | KV → `cafdcdcb096c4b23b5978317a08a0fa1` |
 | `env.ASSETS` | Static assets (the frontend) |
-| `env.APP_URL` | Var → `https://macro.montagnertudor.org` |
+| `env.APP_URL` | Var → `https://jamtytrack.montagnertudor.org` — corrected 2026-08-21; it had said `https://macro.montagnertudor.org`, but that name has no DNS record (NXDOMAIN). The Worker's real custom domain is `jamtytrack.*` |
 
 ### Secrets (Worker-level)
 
 - `APP_PASSWORD` — the shared password for the login gate
 - `OPENROUTER_API_KEY`
+- `TELEGRAM_WEBHOOK_SECRET` — added 2026-08-21; required by `/api/telegram/webhook` (403s without it) and passed as `secret_token` to Telegram's `setWebhook`. The value exists only in the Worker binding and in Telegram's registration — it is not stored in this repo. Registering or re-registering via the app's `/api/telegram/webhook/register` reads it from `env`, so no local copy is needed.
 
 Note the duplication: an OpenRouter key **also** lives in the D1 `app_secrets` table (73 chars, set `2026-08-14 01:22:33`). Two sources of truth for the same credential — worth collapsing to one.
 
@@ -61,7 +62,7 @@ Note the duplication: an OpenRouter key **also** lives in the D1 `app_secrets` t
   "compatibility_date": "2026-08-13",
   "compatibility_flags": ["nodejs_compat"],
   "assets": { "binding": "ASSETS" },
-  "vars": { "APP_URL": "https://macro.montagnertudor.org" },
+  "vars": { "APP_URL": "https://jamtytrack.montagnertudor.org" },
   "d1_databases": [
     { "binding": "DB", "database_name": "macroflow",
       "database_id": "978a69cc-f981-4fa8-a136-c67b556bb643" }
@@ -640,3 +641,303 @@ does, because the frontend still lives only in the `ASSETS` binding (§9). The
 client downscales to a 1600 px long edge and re-encodes as JPEG, which strips the
 EXIF block — iPhone photos carry GPS coordinates there, and nothing else in the
 pipeline removes them.
+
+---
+
+## 12. Habits and Telegram reminders (deployed 2026-08-27)
+
+Daily habit tracking with streaks, and a Telegram reminder you can reply `/done`
+to. Built around the habit that prompted it — **walk 10 km**, day 1 on
+2026-08-26.
+
+Full detail in **`HABITS.md`**. Summary:
+
+| File | Status |
+|---|---|
+| `migrations/0008_habits.sql` | **applied** 2026-08-27 |
+| `worker/habits.ts` | written, tested against real SQLite |
+| `worker/habit-reminders.ts` | written, tested |
+| `worker/habits-assets.ts` | written, driven in a browser |
+| `tools/build-worker.mjs` | wired |
+| Deployed | **yes** — version `66468e1a`, 100% |
+
+Two D1 tables (`habits`, `habit_entries`), taking the database to **16**. No KV —
+there are no bytes to store, so this is the first feature since reports with no
+storage caveat at all.
+
+### It rides the existing cron
+
+No new trigger. The `* * * * *` tick (§2) now calls `checkHabitReminders(env)`
+beside `checkReminders(env)`, wrapped separately so one throwing cannot take the
+other down. `sent_reminders` is reused as the once-only claim with a key of
+`habit:<id>:<date>` — deliberately without the time, so editing a reminder time
+mid-day cannot produce a second nudge.
+
+A reminder is **suppressed when the habit is already done**, the same principle
+`worker/reminders.ts` applies to meals.
+
+### The reminder is answerable
+
+`/done`, `/habits` and `/undo` were added to the bot's dispatch, ahead of the
+existing `/today`, `/log` and `/help`, which are untouched. Replying `/done`
+logs the day from the lock screen without opening the app — which is the reason
+habits went on this channel rather than a banner.
+
+### Telegram is still not connected — §4 is unchanged and this is now blocking
+
+`settings.telegram_bot_token` and `telegram_chat_id` are **still empty**. That is
+why `sent_reminders` has zero rows despite meal reminders being configured since
+August, and habit reminders will behave identically until a bot exists. Creating
+it needs @BotFather and cannot be done from here; the three steps are in
+`HABITS.md` §4.
+
+The habits UI now **says so**: a warning appears whenever a reminder time is set
+and Telegram is not connected, rather than letting a reminder be configured that
+silently goes nowhere. That exact failure already cost this project weeks of
+missing reminders.
+
+### The build parses its own output now
+
+`tools/build-worker.mjs` runs `node --check` on the spliced bundle before
+writing it. Not cosmetic: every module is spliced into **one flat scope**
+alongside hono and zod, so a name that already exists at the top level is a
+`SyntaxError` and the Worker does not boot **at all** — the whole app, not just
+the new feature, and invisible until deploy. It caught exactly that on the first
+run: `esc` was already taken, and is now `escapeHtml`.
+
+The patch chain also switched to a function replacement, so a literal `$&` in an
+injected client script can no longer be read as a replacement pattern.
+
+
+### Deployed 2026-08-27
+
+Version `66468e1a-e872-4e51-8ddf-98207d2ac2f7`, promoted to 100% as deployment
+`110ecf93`. Verified after promotion: `/api/health` 200; `/api/habits`,
+`/habits-client.js` and every existing gated route still 401; the deployed script
+byte-identical to `dist/index.js`; the cron still `* * * * *`; and `wrangler
+tail` showing the scheduled handler running `"outcome": "ok"` with no
+exceptions on the new version.
+
+Not verified, and unverifiable from here: anything behind the password gate —
+that the Habits tab renders in the real nav, and that the frontend still renders
+at all. Sign in and look. Rollback is `npx wrangler rollback --name macroflow`;
+the previous version is `b5c627fe-431a-44ae-86e7-3fc6a55f370e`.
+
+The deployment history in §7 is stale from version 15 onward. Live versions
+since: 18 `605f2295` (progress photos), then the two 2026-08-21 security and
+Telegram uploads, now `66468e1a` (habits).
+
+---
+
+## 13. There are two forks, and production runs this one
+
+`git worktree list` shows a second checkout at `C:/Users/agust/macroflow-app` on
+branch **`source`** — a React + Vite rewrite renamed **Jamtytrack**, with its own
+`worker/`, its own `0001`–`0005` migrations, photo encryption, onboarding and a
+benchmark lab. `master` and `source` have **no common ancestor**. The runbook
+`DEPLOYING-THE-REDESIGN.md` on that branch documents the split and warns that
+neither fork is a superset of the other.
+
+That runbook says nothing in the repo records which fork is live. **It does
+now.**
+
+**Production runs `master`**, confirmed 2026-08-27 two ways:
+
+1. The deployed bundle was pulled with the §9 method and diffed against
+   `dist/worker.js` — **byte-identical**, 767,595 bytes. And
+   `tools/build-worker.mjs` reproduces that file exactly from
+   `recovered/BUNDLE-FULL.js`, so the local base is production.
+2. `wrangler versions list` shows the two most recent uploads as *"Security:
+   telegram sender check, generic 500s"* and *"Telegram: webhook secret, APP_URL
+   fix"* — both `master` patches. Current live version
+   `b5c627fe-431a-44ae-86e7-3fc6a55f370e`, uploaded 2026-08-21T23:15Z.
+
+So the bundle-patching workflow is the correct one to keep using, and the
+warning in that runbook applies in the direction it feared: **deploying `source`
+today would remove push notifications, weekly reports, the reminder cron,
+progress photos and habits.** The D1 rows survive; the endpoints and the
+scheduled behaviour do not.
+
+The frontend is still the real exposure. It exists only in Cloudflare's asset
+store, and `source`'s React app is *a* frontend but not *the* deployed one.
+Backing up the live assets remains the highest-value outstanding task.
+
+---
+
+## 14. The frontend is readable after all — and §9 sent me the wrong way
+
+**Correction to §9 and to `PROGRESS-PHOTOS.md` §9/§10.** Both say the frontend
+exists only in Cloudflare's asset store, cannot be read, and that injected UI
+therefore has to infer the app's markup. That was true when written. It is not
+true now, and building on it broke the nav twice.
+
+**The deployed frontend's source is in this repo**, on the `source` branch,
+checked out at `C:/Users/agust/macroflow-app`:
+
+| What | Where |
+|---|---|
+| The nav component | `macroflow-app/src/components/Layout.tsx` |
+| Its CSS | `macroflow-app/src/styles.css` (mobile bar at `@media (max-width: 760px)`) |
+| The **built** app, as deployed | `macroflow-app/dist/` (built 2026-08-20 19:46) |
+
+`macroflow-app/dist` can be served locally and driven in a browser. That is a
+faithful test host, and it takes about a minute to set up. **Use it.** Anything
+injected into the app should be checked against it before deploying.
+
+### What the bar actually is
+
+```
+<div class="mobile-bar">          fixed, bottom, flex — holds BOTH children
+  <nav class="bottom-nav">        display:grid; grid-template-columns:repeat(4,1fr); height:66px
+    <span class="nav-pill">       absolute; width:calc((100% - 10px)/4); slides on --nav-index
+    <button>Today  Progress  Photos  Settings
+  <button class="scan-fab">       capture — deliberately NOT a tab, sits outside the nav
+```
+
+Three consequences, each of which was got wrong:
+
+1. **`.mobile-bar` is not the nav.** Scoring candidates by control count picked
+   the wrapper over the `<nav>`, so the launcher was appended beside the bar as
+   a **second capture button**, squashing the nav from 271px to 195px.
+2. **The grid track count is hardcoded to 4.** A fifth cell wraps to a second
+   row that the fixed 66px height hides — so **Settings dropped out of the
+   bar**. A grid never overflows sideways, so the old `scrollWidth > clientWidth`
+   check never fired.
+3. **The app already has a Photos tab.** The injected one was a duplicate.
+
+`PROGRESS-PHOTOS.md` §10 describes a different bar — Today · Progress · Scan ·
+Settings, lime accent, Scan a raised circle in the nav. That was accurate for the
+screenshot it came from (2026-08-19) and is **stale**: the carrot restyle on
+`source` replaced it. Treat that section as history, not as the current design.
+
+### Fixed 2026-08-27, version `2bfb19e7`
+
+`worker/habits-assets.ts` and `worker/progress-assets.ts` both now:
+
+- gate candidates on being a real `<nav>`/tablist, pinned, or bottom-anchored —
+  without this the wide layout matched the app's **week picker** and put a
+  Habits button inside the date selector
+- drop any candidate that *contains* another candidate (wrapper vs. bar)
+- rewrite `grid-template-columns` and the sliding pill's width when the bar is a
+  grid, deriving the inset from the bar's own padding
+- append **last**, because the pill is positioned by an index into the app's own
+  tab array — inserting earlier puts the highlight under the wrong tab
+- fall back to the floating button when the item lands somewhere invisible, and
+  re-check on resize, since the 760px breakpoint swaps the bar for a sidebar
+
+Verified against `macroflow-app/dist` at 320, 375, 390, 414, 430, 760 and
+1200 px: one capture button, five tabs on one row, none outside the bar, the
+pill aligned under each of the four native tabs, no horizontal scroll, and the
+sidebar layout untouched on desktop.
+
+### Still outstanding: the frontend and the Worker are different forks
+
+The deployed React app calls endpoints `master`'s Worker does not serve:
+
+- `/api/progress/lock`, `/setup`, `/state`, `/unlock` — the encrypted-photo flow
+- `/api/telegram/status`
+- `/api/benchmark/*`
+
+So the app's own Photos tab and part of Settings are broken independently of any
+injection, and no amount of injected-UI work fixes that. Reconciling the forks —
+porting `master`'s habits, push and reports into `source` and deploying both
+halves together — is the real fix, and it needs a D1 export first
+(`DEPLOYING-THE-REDESIGN.md` §3: the `photo_crypto` row is the only key to every
+body photo).
+
+---
+
+## 15. The encrypted photo lock, restored (2026-08-28, version `379fdbef`)
+
+The app's Photos tab — passphrase lock, end-to-end encrypted gallery — was dead.
+Reported as "you broke it". Part of that was mine, most of it was not, and the
+real cause is worth recording because it is a consequence of the fork split (§13)
+that will bite again.
+
+### What was actually wrong
+
+**The frontend and the Worker were serving different contracts.** The deployed
+assets are `source`'s React app, whose Photos tab calls:
+
+`/api/progress/state` · `/setup` · `/unlock` · `/lock`
+
+`master`'s Worker has never had any of them. They arrived in `source` and were
+live only while `source`'s Worker was deployed. On **2026-08-21** master's bundle
+was uploaded with `keep_assets: true` — which preserved source's frontend and
+replaced its Worker. The Photos tab has had no server since.
+
+**And master's own gallery could not have covered for it**, because of a second
+mismatch nobody had noticed:
+
+| | KV prefix used |
+|---|---|
+| `source`'s Worker (wrote the photos) | `progress-photos/` |
+| `master`'s `worker/progress.ts` (read them) | `progress/` |
+
+All three objects are under `progress-photos/`; `progress/` is **empty**. So
+master's injected gallery listed three rows out of the shared `progress_photos`
+table and then 404ed every single thumbnail. It was never a working fallback.
+
+**My part**: making `progress-assets.ts` stand down when it sees a native Photos
+tab (2026-08-27) removed that injected gallery. It was already showing broken
+images, so it lost little — but it did remove the last thing that looked like a
+photos feature, which is what surfaced the real breakage.
+
+### The fix
+
+`worker/photo-lock.ts` — the missing server half, ported from
+`source/worker/{auth,index}.ts`:
+
+- `photoSecret` / `hasSeparatePhotoSecret` — `PHOTO_PASSPHRASE`, falling back to
+  `APP_PASSWORD` (there is no `PHOTO_PASSPHRASE` binding today, so it is the app
+  passphrase that signs the unlock cookie)
+- `createUnlockCookie` / `photoUnlockExpiry` / `clearUnlockCookie` — a separate
+  HMAC-signed `mf_photos` cookie keyed `::macroflow-photos-v1`, distinct from the
+  session key so one can never be mistaken for the other; 3-minute window
+- `isGloballyLockedOut` / `recordGlobalFailure` / `clearGlobalFailures` — the
+  cross-IP cap that is what actually bounds a short PIN
+- `getPhotoCrypto` / `verifyUnlock` / `requirePhotoUnlock`
+
+Plus the eight routes, rebuilt in `tools/build-worker.mjs` to source's exact
+shapes (bare array from `GET /api/progress`, 204 from DELETE, `encrypted` on
+every row, unlock required for the bytes themselves, `no-store` on them), and
+`KV_PREFIX` in `worker/progress.ts` corrected to `progress-photos/`.
+
+### The part that must never be got wrong
+
+**`photo_crypto` is the only key to every encrypted photo.** Nothing here writes
+to it except `/api/progress/setup`, which returns 409 if a row already exists —
+one-shot on purpose, because replacing the verifiers would orphan every photo
+permanently while revealing nothing. Never add an update path.
+
+### Verified
+
+37 assertions against the compiled module on real SQLite, with the auth helpers
+stubbed to the implementations already in the production bundle: cookie
+round-trip; tampered, expired, malformed and wrong-secret cookies all rejected;
+the gate closed without a cookie and open with one; **no wrapped key returned on
+a failed unlock**; the raw passphrase refused once encryption is configured; a
+recovery proof refused as an auth proof; the global cap opening at 19 failures
+and closing at 20.
+
+Every identifier the new routes reference was checked to exist in the final
+bundle — `node --check` proves syntax, not that a name resolves.
+
+After promotion: `/api/progress`, `/api/progress/state` and `/progress-photos/:key`
+all gated at 401; deployed bundle byte-identical to `dist/index.js`; and the data
+untouched — 3 rows in `progress_photos`, 1 row in `photo_crypto`, 3 objects under
+`progress-photos/`, none under `progress/`.
+
+### Not verified
+
+The unlock flow end to end, which needs the photo passphrase and a signed-in
+session. The crypto is tested and the contract matches source's client exactly,
+but nobody has yet opened the lock against the live Worker.
+
+### The general lesson
+
+Two forks sharing one D1 database and one KV namespace means **the data has a
+format, and whichever Worker is deployed must match it** — table columns
+(`encrypted`), KV prefixes, and response shapes alike. Deploying either fork's
+Worker over the other's assets breaks whatever the other half assumed. §13 framed
+this as a feature-loss risk; it is also a data-compatibility one.

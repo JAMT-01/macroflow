@@ -13,3 +13,16 @@ node_modules/
 
 # Machine-specific: points at a session temp dir that will not exist elsewhere.
 .claude/launch.json
+
+# Design scratch assets. Reference material with no build role, and this repo is
+# public — kept local rather than pushed. The carrot itself lives in the code, as
+# a traced path in macroflow-app/src/components/CarrotMark.tsx.
+PWA Design Styles.zip
+pics/
+
+# Build intermediates from tools/build-worker.mjs. It writes dist/index.js and
+# dist/mods/*; the deployable pair that IS tracked is dist/worker.js +
+# dist/metadata.json. Committing the intermediates only adds a stale second copy
+# that contradicts worker.js whenever a rebuild is not copied across.
+dist/index.js
+dist/mods/

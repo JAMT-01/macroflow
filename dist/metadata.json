@@ -1,7 +1,9 @@
 {
   "main_module": "index.js",
   "compatibility_date": "2026-08-13",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "keep_assets": true,
   "assets": {
     "config": {
@@ -10,12 +12,39 @@
     }
   },
   "bindings": [
-    { "type": "inherit", "name": "APP_PASSWORD" },
-    { "type": "inherit", "name": "OPENROUTER_API_KEY" },
-    { "type": "plain_text", "name": "APP_URL", "text": "https://macro.montagnertudor.org" },
-    { "type": "assets", "name": "ASSETS" },
-    { "type": "d1", "name": "DB", "id": "978a69cc-f981-4fa8-a136-c67b556bb643" },
-    { "type": "kv_namespace", "name": "PHOTOS", "namespace_id": "cafdcdcb096c4b23b5978317a08a0fa1" }
+    {
+      "type": "inherit",
+      "name": "APP_PASSWORD"
+    },
+    {
+      "type": "inherit",
+      "name": "OPENROUTER_API_KEY"
+    },
+    {
+      "type": "plain_text",
+      "name": "APP_URL",
+      "text": "https://jamtytrack.montagnertudor.org"
+    },
+    {
+      "type": "assets",
+      "name": "ASSETS"
+    },
+    {
+      "type": "d1",
+      "name": "DB",
+      "id": "978a69cc-f981-4fa8-a136-c67b556bb643"
+    },
+    {
+      "type": "kv_namespace",
+      "name": "PHOTOS",
+      "namespace_id": "cafdcdcb096c4b23b5978317a08a0fa1"
+    },
+    {
+      "type": "inherit",
+      "name": "TELEGRAM_WEBHOOK_SECRET"
+    }
   ],
-  "annotations": { "workers/message": "Progress photos: nav item, theme fixes" }
+  "annotations": {
+    "workers/message": "Habits: full-bleed page under the nav, not a floating card"
+  }
 }

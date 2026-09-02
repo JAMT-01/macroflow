@@ -96,7 +96,12 @@ export const PROGRESS_CLIENT_SOURCE = /* javascript */ `
 
   function parseColor(value) {
     var text = String(value || '').trim();
-    var m = text.match(/rgba?\(([^)]+)\)/);
+    /* The backslashes must be DOUBLED here. This is inside a template literal,
+       so a single backslash is eaten and the emitted regex becomes
+       /rgba?(([^)]+))/ — capturing groups instead of literal parentheses. That
+       made m[1] "(247, 246, 243", whose first parseFloat is NaN, which poisoned
+       every colour this theme reader produced. Shipped broken 2026-08-21. */
+    var m = text.match(/rgba?\\(([^)]+)\\)/);
     if (m) {
       var p = m[1].split(/[,\\s\\/]+/).filter(Boolean).map(parseFloat);
       if (p.length >= 3 && !(p.length > 3 && p[3] === 0)) return { r: p[0], g: p[1], b: p[2] };
@@ -294,10 +299,26 @@ export const PROGRESS_CLIENT_SOURCE = /* javascript */ `
   var pose = 'front';
   var tab = 'timeline';
 
+  /*
+   * This launcher stands down whenever the app has its own Photos tab, which it
+   * does — so in practice none of this runs any more. It is kept for the case
+   * where the assets are rolled back to a frontend without that tab.
+   *
+   * Two things changed under it when the Worker was made source-compatible
+   * (2026-08-28): /api/progress now returns a bare ARRAY rather than
+   * { photos: [...] }, and it answers 403 { locked: true } until the photo lock
+   * is opened. Both are handled here so the fallback degrades to a clear
+   * message instead of an empty gallery or a thrown error — this UI has no
+   * unlock flow of its own, and inventing one would duplicate the app's.
+   */
   async function refresh() {
     var response = await fetch('/api/progress', { credentials: 'same-origin' });
+    if (response.status === 403) {
+      throw new Error('Progress photos are locked. Open them from the app\\u2019s Photos tab.');
+    }
     if (!response.ok) throw new Error('Could not load progress photos');
-    photos = (await response.json()).photos || [];
+    var payload = await response.json();
+    photos = Array.isArray(payload) ? payload : (payload.photos || []);
   }
 
   function render() {
@@ -537,11 +558,14 @@ export const PROGRESS_CLIENT_SOURCE = /* javascript */ `
    * stuck to the bottom of the viewport.
    */
   function findNav() {
+    /* Already placed? The bar is whatever holds it. */
+    var placed = document.querySelector('[' + NAV_FLAG + ']');
+    if (placed && placed.parentElement) return placed.parentElement;
+
     var selector = 'nav,[role="navigation"],[role="tablist"],footer,' +
       '[class*="nav" i],[class*="tab-bar" i],[class*="tabbar" i],[class*="bottom" i]';
     var candidates = [].slice.call(document.querySelectorAll(selector));
-    var best = null;
-    var bestScore = 0;
+    var scored = [];
 
     for (var i = 0; i < candidates.length; i++) {
       var node = candidates[i];
@@ -554,15 +578,79 @@ export const PROGRESS_CLIENT_SOURCE = /* javascript */ `
       var items = node.querySelectorAll('a,button,[role="tab"]');
       if (items.length < 2) continue;
 
-      var score = Math.min(items.length, 8);
       var position = getComputedStyle(node).position;
-      if (position === 'fixed' || position === 'sticky') score += 6;
-      if (rect.top > window.innerHeight * 0.6) score += 6;
-      if (node.tagName === 'NAV' || node.getAttribute('role') === 'tablist') score += 3;
+      var isRealNav = node.tagName === 'NAV' || node.getAttribute('role') === 'tablist';
+      var pinned = position === 'fixed' || position === 'sticky';
+      var anchoredLow = rect.top > window.innerHeight * 0.6;
 
-      if (score > bestScore) { bestScore = score; best = node; }
+      /* Hard gate. "Wide, short, several controls" also describes a date strip
+         or a toolbar — on the wide layout it matched the app's week picker. A
+         nav bar is a real <nav>, or pinned to the viewport, or along the
+         bottom. Anything else is not one. */
+      if (!isRealNav && !pinned && !anchoredLow) continue;
+
+      var score = Math.min(items.length, 8);
+      if (pinned) score += 6;
+      if (anchoredLow) score += 6;
+      /* A <nav>/tablist IS the bar; a div that merely contains one is its
+         layout wrapper. The real app wraps its nav in a fixed, bottom-anchored
+         div that also holds the detached capture button, and that wrapper used
+         to win on control count — which put this launcher beside the nav as a
+         second capture button instead of inside it. */
+      if (isRealNav) score += 14;
+
+      scored.push({ node: node, score: score });
     }
-    return best;
+
+    /* Drop any candidate containing another candidate: inner is the bar, outer
+       is the wrapper. */
+    var best = null;
+    for (var j = 0; j < scored.length; j++) {
+      var contains = false;
+      for (var k = 0; k < scored.length; k++) {
+        if (k !== j && scored[j].node.contains(scored[k].node)) { contains = true; break; }
+      }
+      if (contains) continue;
+      if (!best || scored[j].score > best.score) best = scored[j];
+    }
+    return best ? best.node : null;
+  }
+
+  /* Cells are children that occupy a column. An absolutely-positioned child is
+     a decoration — the app's sliding highlight is one — and must never be
+     counted as a tab, cloned as a template, or laid out as a grid item. */
+  function navCells(nav) {
+    return [].slice.call(nav.children).filter(function (node) {
+      return node.nodeType === 1 && getComputedStyle(node).position !== 'absolute' &&
+        node.getBoundingClientRect().height > 0;
+    });
+  }
+
+  function navOverlays(nav) {
+    return [].slice.call(nav.children).filter(function (node) {
+      return node.nodeType === 1 && getComputedStyle(node).position === 'absolute';
+    });
+  }
+
+  /*
+   * Does the app already ship its own Photos tab?
+   *
+   * It does. The deployed frontend has Today · Progress · Photos · Settings of
+   * its own, so injecting one produced two tabs labelled "Photos" and pushed
+   * Settings onto a second grid row, out of the bar. When a native one is
+   * present this launcher stands down entirely and the app's tab is the way in.
+   *
+   * Kept conditional rather than deleted: if the assets are ever rolled back to
+   * a frontend without that tab, this silently starts working again.
+   */
+  function hasNativePhotosTab(nav) {
+    var items = nav.querySelectorAll('a,button,[role="tab"]');
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].hasAttribute(NAV_FLAG)) continue;
+      var label = (items[i].textContent || '').trim().toLowerCase();
+      if (label === 'photos' || label === 'fotos') return true;
+    }
+    return false;
   }
 
   /*
@@ -575,9 +663,8 @@ export const PROGRESS_CLIENT_SOURCE = /* javascript */ `
    * then changed.
    */
   function buildNavItem(nav) {
-    var siblings = [].slice.call(nav.children).filter(function (node) {
-      return node.nodeType === 1 && !node.hasAttribute(NAV_FLAG) &&
-        node.getBoundingClientRect().height > 0;
+    var siblings = navCells(nav).filter(function (node) {
+      return !node.hasAttribute(NAV_FLAG);
     });
     if (siblings.length < 2) return null;
 
@@ -639,20 +726,60 @@ export const PROGRESS_CLIENT_SOURCE = /* javascript */ `
    * One more item can overflow a nav that was laid out for a fixed count. Only
    * applied when the nav actually overflows, and scoped to that element.
    */
+  /*
+   * Make room for the extra cell.
+   *
+   * This used to handle flex only, and only when the bar overflowed sideways.
+   * The real bar is a CSS GRID with a hardcoded track count, and a grid does
+   * not overflow sideways — it wraps to a second row that a fixed bar height
+   * then hides. So this never fired and the last tab silently left the bar.
+   * Grids need the track count rewritten and any absolutely-positioned
+   * highlight resized to match the new track.
+   */
   function fitNav(nav) {
+    var style = getComputedStyle(nav);
+    var count = navCells(nav).length;
+    if (!count) return;
+
+    if (style.display.indexOf('grid') !== -1) {
+      var tracks = (style.gridTemplateColumns || '').split(/\\s+/).filter(function (value) {
+        return value && value !== 'none';
+      }).length;
+      if (tracks >= count) return;
+
+      var pad = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+      navOverlays(nav).forEach(function (overlay) {
+        overlay.setAttribute('data-macroflow-navpill', '');
+      });
+
+      nav.setAttribute('data-macroflow-grid', String(count));
+      var id = 'macroflow-nav-grid-' + count;
+      if (document.getElementById(id)) return;
+      var gridStyle = document.createElement('style');
+      gridStyle.id = id;
+      gridStyle.textContent =
+        '[data-macroflow-grid="' + count + '"]{grid-template-columns:repeat(' + count + ',1fr) !important;}' +
+        '[data-macroflow-grid="' + count + '"] > [data-macroflow-navpill]{' +
+          'width:calc((100% - ' + pad + 'px) / ' + count + ') !important;}' +
+        '[data-macroflow-grid="' + count + '"] > * > span{max-width:100%;white-space:nowrap;' +
+          'overflow:hidden;text-overflow:ellipsis;}';
+      document.head.appendChild(gridStyle);
+      return;
+    }
+
     if (nav.scrollWidth <= nav.clientWidth + 2) return;
     nav.setAttribute('data-macroflow-fit', '1');
     if (document.getElementById('macroflow-nav-fit')) return;
 
-    var style = document.createElement('style');
-    style.id = 'macroflow-nav-fit';
-    style.textContent =
+    var flexStyle = document.createElement('style');
+    flexStyle.id = 'macroflow-nav-fit';
+    flexStyle.textContent =
       '[data-macroflow-fit]{gap:2px !important;column-gap:2px !important;}' +
       '[data-macroflow-fit] > *{min-width:0 !important;flex:1 1 0 !important;' +
         'padding-left:3px !important;padding-right:3px !important;}' +
       '[data-macroflow-fit] > * *{max-width:100%;white-space:nowrap;overflow:hidden;' +
         'text-overflow:ellipsis;}';
-    document.head.appendChild(style);
+    document.head.appendChild(flexStyle);
   }
 
   /** Idempotent: returns true once the launcher is in the nav. */
@@ -660,21 +787,24 @@ export const PROGRESS_CLIENT_SOURCE = /* javascript */ `
     if (document.querySelector('[' + NAV_FLAG + ']')) return true;
     var nav = findNav();
     if (!nav) return false;
+
+    /* The app has its own Photos tab — stand down rather than duplicate it. */
+    if (hasNativePhotosTab(nav)) return true;
+
     var item = buildNavItem(nav);
     if (!item) return false;
 
     /*
-     * Insert second-to-last rather than appending. Settings conventionally sits
-     * last, and it does in this app (Today · Progress · Scan · Settings), so
-     * appending would strand it mid-row. This also keeps the raised centre
-     * button near the middle: at five items it lands dead centre instead of
-     * right-of-centre.
+     * Appended LAST.
+     *
+     * The earlier rule inserted second-to-last, to keep Settings at the end of
+     * a bar that was then Today · Progress · Scan · Settings. That bar is gone:
+     * the app now highlights the active tab with a single pill positioned by an
+     * index into its OWN tab array, so inserting ahead of a native tab shifts
+     * that tab a cell right while its index stays put and the highlight lands
+     * under the wrong tab. Appending leaves every native index correct.
      */
-    var siblings = [].slice.call(nav.children).filter(function (node) {
-      return node.nodeType === 1 && node.getBoundingClientRect().height > 0;
-    });
-    var last = siblings[siblings.length - 1];
-    if (last) nav.insertBefore(item, last); else nav.appendChild(item);
+    nav.appendChild(item);
 
     fitNav(nav);
     return true;
@@ -695,7 +825,13 @@ export const PROGRESS_CLIENT_SOURCE = /* javascript */ `
     /* Zero-sized and out of flow: the host must never contribute a line box to
        the app's layout. A fixed-position ancestor does not create a containing
        block for fixed descendants, so the sheet still covers the viewport. */
-    host.style.cssText = 'all:initial;position:fixed;top:0;left:0;width:0;height:0;';
+    /* Absolute, not fixed: 'position:fixed' always creates a stacking context,
+       which would trap this sheet below every app element with a positive
+       z-index (.calorie-ring 1, .mobile-bar 50, .modal-backdrop 100). Absolute
+       with z-index auto creates none, so the sheet competes at the root and
+       wins. Still out of flow at 0x0, so it contributes no line box. Same fix
+       as worker/habits-assets.ts — see the long note there. */
+    host.style.cssText = 'all:initial;position:absolute;top:0;left:0;width:0;height:0;';
     root = host.attachShadow({ mode: 'open' });
     root.appendChild(el('style', null, buildStyle(readTheme())));
     document.body.appendChild(host);
