@@ -86,7 +86,7 @@ export function SettingsScreen({ settings, onSettings }: { settings: Settings; o
 
   return (
     <div className="page settings-page">
-      <header className="page-header"><div><p className="eyebrow">PERSONALIZE</p><h1>Settings</h1><p className="page-subtitle">Your data stays in your own Cloudflare account.</p></div>{status && <div className="saved-toast"><Check size={16} /> {status}</div>}</header>
+      <header className="page-header"><div><h1>Settings</h1><p className="page-subtitle">Your data stays in your own Cloudflare account.</p></div>{status && <div className="saved-toast"><Check size={16} /> {status}</div>}</header>
 
       <div className="settings-layout">
         <div className="settings-main">

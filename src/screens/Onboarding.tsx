@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ArrowRight, Check, ShieldCheck, Sparkles } from "lucide-react";
+import { CarrotMark } from "../components/CarrotMark";
 import { api } from "../api";
 import type { Settings } from "../types";
 
@@ -53,7 +54,7 @@ export function Onboarding({ initial, onComplete }: { initial: Settings; onCompl
     <div className="onboarding">
       <div className="onboarding-art">
         <div className="orb orb-one" /><div className="orb orb-two" />
-        <div className="onboarding-brand"><span><Sparkles /></span> Jamtytrack</div>
+        <div className="onboarding-brand"><span><CarrotMark height={21} /></span> Jamtytrack</div>
         <div className="art-copy">
           <p className="eyebrow">PRIVATE BY DEFAULT</p>
           <h1>Nutrition tracking,<br /><em>without the friction.</em></h1>

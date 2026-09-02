@@ -225,7 +225,7 @@ export function ProgressPhotos({ suggestedWeight }: { suggestedWeight: number })
   const oldest = forCompare.at(-1);
   const newest = forCompare.length > 1 ? forCompare[0] : undefined;
 
-  if (unlocked === null) return <section className="chart-card"><div className="chart-header"><div><p className="eyebrow">BODY</p><h2>Progress photos</h2></div></div><div className="skeleton rows" /></section>;
+  if (unlocked === null) return <section className="chart-card"><div className="chart-header"><div><h2>Progress photos</h2></div></div><div className="skeleton rows" /></section>;
 
   if (!unlocked) return (
     <section className="chart-card photos-card locked">
@@ -244,12 +244,12 @@ export function ProgressPhotos({ suggestedWeight }: { suggestedWeight: number })
     </section>
   );
 
-  if (!photos) return <section className="chart-card"><div className="chart-header"><div><p className="eyebrow">BODY</p><h2>Progress photos</h2></div></div><div className="skeleton rows" /></section>;
+  if (!photos) return <section className="chart-card"><div className="chart-header"><div><h2>Progress photos</h2></div></div><div className="skeleton rows" /></section>;
 
   return (
     <section className="chart-card photos-card">
       <div className="chart-header">
-        <div><p className="eyebrow">BODY</p><h2>Progress photos</h2></div>
+        <div><h2>Progress photos</h2></div>
         <div className="photo-views">
           {photos.length > 0 && <>
             <button className={view === "timeline" ? "active" : ""} onClick={() => setView("timeline")}>Timeline</button>

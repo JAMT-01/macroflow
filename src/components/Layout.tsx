@@ -1,4 +1,5 @@
-import { BarChart3, Camera, Home, Images, Plus, Settings as SettingsIcon, Sparkles } from "lucide-react";
+import { CarrotMark } from "./CarrotMark";
+import { BarChart3, Camera, Home, Images, Plus, Settings as SettingsIcon } from "lucide-react";
 
 export type Tab = "today" | "progress" | "photos" | "settings";
 
@@ -17,7 +18,7 @@ export function Layout({ tab, setTab, onScan, children }: { tab: Tab; setTab: (t
     <div className="app-shell">
       <aside className="sidebar">
         <button className="brand" onClick={() => setTab("today")}>
-          <span className="brand-mark"><Sparkles size={19} /></span>
+          <span className="brand-mark"><CarrotMark height={23} /></span>
           <span>Jamtytrack</span>
         </button>
         <nav className="side-nav">
