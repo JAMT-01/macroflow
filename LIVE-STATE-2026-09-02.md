@@ -8,8 +8,8 @@ other documents cannot: **is what is deployed still what they describe?**
 have gone stale.** Nothing needs deploying. Two things need correcting, and one
 gap is worth a decision.
 
-**But GitHub is 13 days behind, and the deployed frontend's source is not in it
-at all** — see §8. That is the one urgent item here.
+GitHub **was** 13 days behind, and the deployed frontend's source was not in it
+at all. That was the urgent item; it was resolved the same day — see §8.
 
 ---
 
@@ -264,41 +264,58 @@ content-hashed, so `assets/index-*.js` on the live page matching
 
 ---
 
-## 8. GitHub — `JAMT-01/macroflow` is 13 days behind reality
+## 8. GitHub — was 13 days behind, resolved 2026-09-02
 
-Checked 2026-09-02. Both branches report **0 ahead, 0 behind** their remotes,
-which looks reassuring and is misleading: nothing is ahead because nothing has
-been **committed**. The last push was **2026-08-20T21:23Z**.
+### What the problem was
 
-| Branch | Remote HEAD | Committed | Uncommitted in the worktree |
-|---|---|---|---|
-| `master` | `d965e6d` (2026-08-20 16:06) | recovered bundle + progress photos | 6 modified, 13 untracked — **~2,900 insertions** |
-| `source` | `00901a2` (2026-08-20 18:23) | carrot restyle + deploy runbook | 15 modified, 1 untracked |
+Both branches reported **0 ahead, 0 behind**, which looked reassuring and was
+misleading: nothing was ahead because nothing had been **committed**. The last
+push was **2026-08-20T21:23Z**.
 
-**Everything described in this document is missing from GitHub**: the habits
-feature (`worker/habits.ts`, `habit-reminders.ts`, `habits-assets.ts`),
-`worker/photo-lock.ts`, `migrations/0008_habits.sql`, the rebuilt
-`dist/worker.js` that is actually deployed, `HABITS.md`,
-`PHOTOS-HOW-IT-WORKS.md`, and the security patches in `tools/build-worker.mjs`.
+| Branch | Remote HEAD was | Uncommitted in the worktree |
+|---|---|---|
+| `master` | `d965e6d` (2026-08-20 16:06) | 6 modified, 13 untracked — **~2,900 insertions** |
+| `source` | `00901a2` (2026-08-20 18:23) | 15 modified, 1 untracked |
 
-### The part that matters: the deployed frontend is not in git
+Everything described in this document was missing from GitHub: the habits
+feature, `worker/photo-lock.ts`, `migrations/0008_habits.sql`, the rebuilt
+`dist/worker.js` that is actually deployed, both docs, and the security patches
+in `tools/build-worker.mjs`.
 
-`source`'s last commit is **18:23**. The modified files in that worktree are
+### The part that mattered: the deployed frontend was not in git
+
+`source`'s last commit was **18:23**. The modified files in that worktree were
 stamped **18:51–19:45**. `macroflow-app/dist/assets/` was built at **19:46** —
 *after* those edits, and from them.
 
-Verified rather than assumed: the bundle served right now by
+Verified rather than assumed: the bundle served by
 `jamtytrack.montagnertudor.org` contains the carrot glyph — `viewBox="0 0 318
-916"`, path opening `M 156 0C 162 1.5` — and that artwork exists in exactly one
-file, `src/components/CarrotMark.tsx`, which is **untracked**. The committed
-`Layout.tsx` still renders lucide's `Sparkles` instead.
+916"`, path opening `M 156 0C 162 1.5` — and that artwork existed in exactly one
+file, `src/components/CarrotMark.tsx`, which was **untracked**. The committed
+`Layout.tsx` still rendered lucide's `Sparkles`.
 
-**So the live UI cannot be rebuilt from GitHub.** Its only source is the
-uncommitted working tree at `C:/Users/agust/macroflow-app`, on one machine, in
-OneDrive. That is the same failure `macroflow-kb.md` §9 was written about — *"there
-is no local source checkout — the deployed Worker is currently the only copy of
-the code"* — reappearing on the other fork. Committing that worktree is the
-single highest-value action in this document.
+So the live UI could not be rebuilt from GitHub. Its only source was one
+uncommitted working tree, on one machine, in OneDrive — the same failure
+`macroflow-kb.md` §9 was written about (*"the deployed Worker is currently the
+only copy of the code"*), reappearing on the other fork.
+
+### What was done
+
+| Branch | New commit | Contents |
+|---|---|---|
+| `master` | `aef89da` | habits, photo lock, 3 security fixes, migration 0008, `dist/worker.js`, the docs |
+| `source` | `6ebe71a` | `CarrotMark.tsx` + the 15 files the deployed bundle was built from |
+
+Both branches are level with `origin` and both worktrees are clean.
+`CarrotMark.tsx` is on GitHub. **The deployed frontend is reproducible from the
+repository again.**
+
+Deliberately left out of a public repo, and added to `.gitignore`:
+
+| Excluded | Why |
+|---|---|
+| `PWA Design Styles.zip`, `pics/` | design scratch, no build role; the carrot itself lives in the code as a traced path |
+| `dist/index.js`, `dist/mods/` | build intermediates. `build-worker.mjs` writes `dist/index.js`; the tracked deployable is `dist/worker.js` + `dist/metadata.json`, and the local intermediates were a stale Aug-27 second copy that contradicted it |
 
 ### The repo is public
 
@@ -332,14 +349,12 @@ app, and the fixes exist on one machine only. Pushing resolves both halves.
 
 ## 9. What to do
 
-**First, before anything else:**
+Done 2026-09-02:
 
-- [ ] **Commit the `macroflow-app` worktree**, `CarrotMark.tsx` included — it is
-      the only copy of the deployed frontend's source (§8)
-- [ ] Commit and push the `master` worktree — habits, photo lock, security
-      patches, migration 0008, and the docs (§8)
+- [x] Commit the `macroflow-app` worktree, `CarrotMark.tsx` included — `6ebe71a` (§8)
+- [x] Commit and push the `master` worktree — `aef89da` (§8)
 
-**Then:**
+Still open:
 
 - [ ] Correct `macroflow-kb.md` §12 — the bot is connected; point it at `HABITS.md` §4
 - [ ] Correct `macroflow-kb.md` §10 — vision model is `gemini-3.7-flash`
